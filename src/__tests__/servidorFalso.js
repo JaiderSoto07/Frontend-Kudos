@@ -733,6 +733,158 @@ function atenderCategorias(metodo, ruta, cuerpo) {
   return null
 }
 
+export const ID_REPLICA = {
+  luis: uuid(201),
+  marta: uuid(202),
+  vetada: uuid(203),
+  bajoVetada: uuid(204),
+}
+
+export const replicasGuardadas = () => replicas
+export const calificacionesGuardadas = () => calificaciones
+
+let replicas = []
+let calificaciones = {}
+let siguienteReplica = 300
+
+const replicaFalsa = (id, idKudo, idReplicaPadre, autor, contenido, extra = {}) => ({
+  id,
+  idKudo,
+  idReplicaPadre: idReplicaPadre ?? '00000000-0000-0000-0000-000000000000',
+  idAutor: autor.id,
+  nombreAutor: autor.nombre,
+  contenido,
+  fechaCreacion: '2026-11-10T11:00:00',
+  estado: 'VISIBLE',
+  vetada: false,
+  promedioCalificacion: 0,
+  cantidadCalificaciones: 0,
+  ...extra,
+})
+
+const replicasIniciales = () => [
+  replicaFalsa(
+    ID_REPLICA.luis,
+    ID_KUDO.segundo,
+    null,
+    PERSONAS[0],
+    '¡Gracias, Marta! Fue un gusto.',
+    {
+      promedioCalificacion: 5,
+      cantidadCalificaciones: 1,
+    },
+  ),
+  replicaFalsa(ID_REPLICA.marta, ID_KUDO.segundo, ID_REPLICA.luis, PERSONAS[1], 'Te lo merecías.'),
+  replicaFalsa(
+    ID_REPLICA.vetada,
+    ID_KUDO.segundo,
+    null,
+    PERSONAS[1],
+    'Contenido vetado por moderación',
+    {
+      estado: 'VETADO',
+      vetada: true,
+    },
+  ),
+  replicaFalsa(
+    ID_REPLICA.bajoVetada,
+    ID_KUDO.segundo,
+    ID_REPLICA.vetada,
+    PERSONAS[0],
+    'Esta respuesta sigue visible.',
+  ),
+]
+
+const calificacionesIniciales = () => ({
+  [ID_KUDO.primero]: { [uuid(901)]: 4, [uuid(902)]: 5 },
+  [ID_KUDO.segundo]: { [uuid(901)]: 4, [uuid(902)]: 5 },
+  [ID_REPLICA.luis]: { [uuid(902)]: 5 },
+})
+
+function arbol(idKudo) {
+  const nodos = replicas
+    .filter((replica) => replica.idKudo === idKudo)
+    .map((replica) => ({ ...replica, respuestas: [] }))
+  const porId = Object.fromEntries(nodos.map((nodo) => [nodo.id, nodo]))
+  const raices = []
+  for (const nodo of nodos) {
+    const padre = porId[nodo.idReplicaPadre]
+    if (padre) padre.respuestas.push(nodo)
+    else raices.push(nodo)
+  }
+  return raices
+}
+
+function publicarReplica(idKudo, idReplicaPadre, cuerpo) {
+  if (!String(cuerpo?.contenido ?? '').trim()) return error('Escribe el mensaje antes de publicar.')
+  siguienteReplica += 1
+  replicas.push(
+    replicaFalsa(
+      uuid(siguienteReplica),
+      idKudo,
+      idReplicaPadre,
+      { id: usuarioActual.id, nombre: `${usuarioActual.nombres} ${usuarioActual.apellidos}` },
+      cuerpo.contenido,
+    ),
+  )
+  return ok()
+}
+
+function valoracionesDe(id) {
+  const estrellas = Object.values(calificaciones[id] ?? {})
+  const cantidad = estrellas.length
+  const suma = estrellas.reduce((total, valor) => total + valor, 0)
+  return {
+    promedio: cantidad ? Math.round((suma * 100) / cantidad) / 100 : 0,
+    cantidad,
+    distribucion: [1, 2, 3, 4, 5].map((valor) => estrellas.filter((e) => e === valor).length),
+    miCalificacion: calificaciones[id]?.[usuarioActual.id] ?? 0,
+  }
+}
+
+function calificar(contenido, cuerpo) {
+  if (!contenido) return error('El contenido indicado no existe.')
+  if (contenido.idAutor === usuarioActual.id) {
+    return error('No puedes calificar lo que tú mismo escribiste.')
+  }
+  if (!(cuerpo.estrellas >= 1 && cuerpo.estrellas <= 5)) {
+    return error('La calificación debe ser de 1 a 5 estrellas.')
+  }
+  calificaciones[contenido.id] = {
+    ...calificaciones[contenido.id],
+    [usuarioActual.id]: cuerpo.estrellas,
+  }
+  const resumen = valoracionesDe(contenido.id)
+  contenido.promedioCalificacion = resumen.promedio
+  contenido.cantidadCalificaciones = resumen.cantidad
+  return ok()
+}
+
+function atenderConversacion(metodo, ruta, cuerpo) {
+  const deKudo = ruta.match(
+    /^\/api\/kudos\/([^/]+)\/(conversacion|replicas|calificacion|valoraciones)$/,
+  )
+  if (deKudo) {
+    const kudo = kudos.find((k) => k.id === deKudo[1])
+    if (!kudo) return error('El Kudo indicado no existe.')
+    if (metodo === 'GET' && deKudo[2] === 'conversacion') return ok(arbol(kudo.id))
+    if (metodo === 'POST' && deKudo[2] === 'replicas') return publicarReplica(kudo.id, null, cuerpo)
+    if (metodo === 'PUT' && deKudo[2] === 'calificacion') return calificar(kudo, cuerpo)
+    if (metodo === 'GET' && deKudo[2] === 'valoraciones') return ok([valoracionesDe(kudo.id)])
+  }
+  const deReplica = ruta.match(/^\/api\/replicas\/([^/]+)\/(respuestas|calificacion|valoraciones)$/)
+  if (deReplica) {
+    const replica = replicas.find((r) => r.id === deReplica[1])
+    if (!replica) return error('La réplica indicada no existe.')
+    if (metodo === 'POST' && deReplica[2] === 'respuestas') {
+      return publicarReplica(replica.idKudo, replica.id, cuerpo)
+    }
+    if (metodo === 'PUT' && deReplica[2] === 'calificacion') return calificar(replica, cuerpo)
+    if (metodo === 'GET' && deReplica[2] === 'valoraciones') return ok([valoracionesDe(replica.id)])
+  }
+  return null
+}
+
 export const peticiones = []
 
 function atender(metodo, url, cuerpo) {
@@ -749,6 +901,10 @@ function atender(metodo, url, cuerpo) {
   }
   if (ruta.startsWith('/api/categorias')) {
     const respuesta = atenderCategorias(metodo, ruta, cuerpo)
+    if (respuesta) return respuesta
+  }
+  if (/^\/api\/(kudos\/[^/]+\/|replicas\/)/.test(ruta)) {
+    const respuesta = atenderConversacion(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
   }
   if (/^\/api\/(kudos|personas|usuarios\/[^/]+\/kudos)/.test(ruta)) {
@@ -778,6 +934,9 @@ export function iniciarServidorFalso({ conSesion = true, usuario = USUARIO_ACTIV
   cuenta = cuentaDe(usuario)
   solicitudes = SOLICITUDES_INICIALES.map((s) => ({ ...s }))
   kudos = kudosIniciales()
+  replicas = replicasIniciales()
+  calificaciones = calificacionesIniciales()
+  siguienteReplica = 300
   facultades = FACULTADES_INICIALES.map((f) => ({ ...f }))
   programas = PROGRAMAS_INICIALES.map((p) => ({ ...p }))
   vinculos = VINCULOS_INICIALES.map((v) => ({ ...v }))

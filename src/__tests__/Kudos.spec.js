@@ -128,7 +128,8 @@ describe('Detalle e historial (CU-002, CU-003)', () => {
     expect(wrapper.text()).toContain('Marta Ruiz')
     expect(wrapper.text()).toContain('Trabajo en equipo')
     expect(wrapper.find('.detalle-kudo__datos').text()).toContain('4')
-    expect(wrapper.find('.detalle-kudo__datos').text()).toContain('4.5 de 5')
+    await esperar(() => wrapper.find('.detalle-kudo__valoraciones').exists())
+    expect(wrapper.find('.detalle-kudo__valoraciones').text()).toContain('4.5 de 5')
     wrapper.unmount()
   })
 

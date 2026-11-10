@@ -105,6 +105,27 @@ export const desdeDto = {
     totalKudos: dto.totalKudos ?? 0,
   }),
 
+  replica: (dto) => ({
+    id: idDe(dto),
+    idReplicaPadre: idValido(dto.idReplicaPadre),
+    idAutor: idValido(dto.idAutor),
+    nombreAutor: dto.nombreAutor ?? '',
+    contenido: dto.contenido ?? '',
+    fechaCreacion: dto.fechaCreacion ?? '',
+    estado: dto.estado ?? '',
+    vetada: dto.vetada === true,
+    promedioCalificacion: Number(dto.promedioCalificacion ?? 0),
+    cantidadCalificaciones: dto.cantidadCalificaciones ?? 0,
+    respuestas: (dto.respuestas ?? []).map(desdeDto.replica),
+  }),
+
+  valoraciones: (dto) => ({
+    promedio: Number(dto.promedio ?? 0),
+    cantidad: dto.cantidad ?? 0,
+    distribucion: dto.distribucion?.length ? dto.distribucion : [0, 0, 0, 0, 0],
+    miCalificacion: dto.miCalificacion ?? 0,
+  }),
+
   persona: (dto) => ({
     id: idDe(dto),
     nombre: dto.nombre ?? '',
@@ -167,6 +188,10 @@ export const haciaDto = {
     idCategoria: datos.idCategoria || null,
     contenido: texto(datos.contenido),
   }),
+
+  replica: (contenido) => ({ contenido: texto(contenido) }),
+
+  calificacion: (estrellas) => ({ estrellas: Number(estrellas) }),
 
   facultad: (datos) => ({ nombre: texto(datos.nombre) }),
 

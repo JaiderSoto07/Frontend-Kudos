@@ -29,3 +29,16 @@ export function formatFechaHora(fecha) {
 }
 
 export const formatPromedio = (promedio) => Number(promedio ?? 0).toFixed(1)
+
+export const NIVEL_MAXIMO_SANGRIA = 5
+
+export const ESTRELLAS = [1, 2, 3, 4, 5]
+
+export const MENSAJE_REPLICA_VACIA = 'Escribe tu réplica antes de publicar.'
+
+export const validarReplica = (contenido) =>
+  String(contenido ?? '').trim() ? '' : MENSAJE_REPLICA_VACIA
+
+export const conSangria = (nivel) => nivel < NIVEL_MAXIMO_SANGRIA
+
+export const porcentaje = (cantidad, total) => (total ? Math.round((cantidad * 100) / total) : 0)

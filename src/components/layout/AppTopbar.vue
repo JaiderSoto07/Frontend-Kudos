@@ -17,7 +17,7 @@ function cerrarMenuUsuario() {
 async function cerrarSesion() {
   cerrarMenuUsuario()
   await sesion.cerrarSesion()
-  router.replace({ name: 'login' })
+  await router.replace({ name: 'login' })
 }
 </script>
 

@@ -133,11 +133,11 @@ export function protegerRutas(router) {
     return true
   })
 
-  alSesionVencida((error) => {
+  alSesionVencida(async (error) => {
     const sesion = useSesionStore()
     if (!sesion.autenticada) return
     sesion.olvidarSesion(error.message)
-    router.replace({ name: 'login' })
+    await router.replace({ name: 'login' })
   })
 }
 

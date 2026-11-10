@@ -46,14 +46,14 @@ onMounted(async () => {
   personas.value = await kudoService.buscarPersonas().catch(() => [])
 })
 
-function filtrar() {
+async function filtrar() {
   aviso.value = ''
-  cargar(1)
+  await cargar(1)
 }
 
-function limpiar() {
+async function limpiar() {
   Object.assign(filtros, { categoria: '', persona: '' })
-  filtrar()
+  await filtrar()
 }
 
 async function publicado() {

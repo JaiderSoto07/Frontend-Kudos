@@ -46,13 +46,13 @@ async function nuevaSolicitudEnviada() {
   aviso.value = MENSAJE_NUEVA_SOLICITUD
 }
 
-onMounted(() => {
-  if (sesion.registrado) cuentaStore.cargar()
+onMounted(async () => {
+  if (sesion.registrado) await cuentaStore.cargar()
 })
 
 async function celularVerificado() {
   await sesion.cargarSesion()
-  if (sesion.cuentaActiva) router.replace(RUTA_INICIO)
+  if (sesion.cuentaActiva) await router.replace(RUTA_INICIO)
   else await cuentaStore.recargar()
 }
 
@@ -60,7 +60,7 @@ async function cerrarSesion() {
   saliendo.value = true
   await sesion.cerrarSesion()
   saliendo.value = false
-  router.replace({ name: 'login' })
+  await router.replace({ name: 'login' })
 }
 </script>
 

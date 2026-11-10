@@ -43,8 +43,8 @@ watch(tipo, cargar)
 
 watch(
   idPersona,
-  () => {
-    if (tipo.value === 'recibidos') cargar()
+  async () => {
+    if (tipo.value === 'recibidos') await cargar()
     else tipo.value = 'recibidos'
   },
   { immediate: true },

@@ -63,7 +63,7 @@ async function guardarDatos() {
 
 async function celularCambiado() {
   await sesion.cargarSesion()
-  router.replace(RUTA_ESTADO_CUENTA)
+  await router.replace(RUTA_ESTADO_CUENTA)
 }
 
 async function cambiarCorreo() {
@@ -76,7 +76,7 @@ async function cambiarCorreo() {
     await store.cambiarCorreo(correo.value)
     await sesion.cerrarSesion()
     sesion.olvidarSesion(MENSAJE_CORREO_CAMBIADO)
-    router.replace({ name: 'login' })
+    await router.replace({ name: 'login' })
   } catch (e) {
     errorServidorCorreo.value = e.message
   } finally {

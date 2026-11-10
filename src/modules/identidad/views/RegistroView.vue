@@ -46,7 +46,7 @@ async function registrar() {
   try {
     await identidadService.registrar({ ...formulario })
     await sesion.cargarSesion()
-    router.replace(RUTA_ESTADO_CUENTA)
+    await router.replace(RUTA_ESTADO_CUENTA)
   } catch (e) {
     errorServidor.value = e.message
   } finally {
@@ -58,7 +58,7 @@ async function salir() {
   saliendo.value = true
   await sesion.cerrarSesion()
   saliendo.value = false
-  router.replace({ name: 'login' })
+  await router.replace({ name: 'login' })
 }
 </script>
 
