@@ -83,6 +83,34 @@ export const desdeDto = {
     fechaSolicitud: dto.fechaSolicitud ?? '',
   }),
 
+  kudo: (dto) => ({
+    id: idDe(dto),
+    idAutor: idValido(dto.idAutor),
+    nombreAutor: dto.nombreAutor ?? '',
+    idDestinatario: idValido(dto.idDestinatario),
+    nombreDestinatario: dto.nombreDestinatario ?? '',
+    nombreCategoria: dto.nombreCategoria ?? '',
+    contenido: dto.contenido ?? '',
+    fechaCreacion: dto.fechaCreacion ?? '',
+    estado: dto.estado ?? '',
+    cantidadVisualizaciones: dto.cantidadVisualizaciones ?? 0,
+    promedioCalificacion: Number(dto.promedioCalificacion ?? 0),
+    cantidadCalificaciones: dto.cantidadCalificaciones ?? 0,
+  }),
+
+  paginaKudos: (dto) => ({
+    kudos: (dto.kudos ?? []).map(desdeDto.kudo),
+    pagina: dto.pagina ?? 1,
+    totalPaginas: dto.totalPaginas ?? 0,
+    totalKudos: dto.totalKudos ?? 0,
+  }),
+
+  persona: (dto) => ({
+    id: idDe(dto),
+    nombre: dto.nombre ?? '',
+    correo: dto.correo ?? '',
+  }),
+
   cuenta: (dto) => ({
     id: idDe(dto),
     nombres: dto.nombres ?? '',
@@ -133,6 +161,12 @@ export const haciaDto = {
   codigo: (codigo) => ({ codigo: texto(codigo) }),
 
   rechazo: (motivo) => ({ motivo: texto(motivo) }),
+
+  kudo: (datos) => ({
+    idDestinatario: datos.idDestinatario || null,
+    idCategoria: datos.idCategoria || null,
+    contenido: texto(datos.contenido),
+  }),
 
   facultad: (datos) => ({ nombre: texto(datos.nombre) }),
 

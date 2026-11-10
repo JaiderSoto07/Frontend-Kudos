@@ -6,7 +6,10 @@ import {
 } from '@/shared/domain/cuenta'
 
 export const GRUPOS_MENU = [
-  [{ label: 'Inicio', icon: 'home', to: '/inicio' }],
+  [
+    { label: 'Inicio', icon: 'home', to: '/inicio' },
+    { label: 'Mis Kudos', icon: 'star', to: '/mis-kudos' },
+  ],
   [
     { label: 'Solicitudes', icon: 'users', to: '/solicitudes', roles: ROLES_APROBADORES },
     {

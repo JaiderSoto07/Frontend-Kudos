@@ -202,6 +202,131 @@ const SOLICITUDES_INICIALES = [
 ]
 
 let solicitudes = []
+let kudos = []
+
+export const kudosGuardados = () => kudos
+
+export const ID_KUDO = { primero: uuid(101), segundo: uuid(102) }
+
+export const PERSONAS = [
+  { id: uuid(111), nombre: 'Luis Gómez', correo: 'luis@gmail.com' },
+  { id: uuid(112), nombre: 'Marta Ruiz', correo: 'marta@gmail.com' },
+]
+
+export const CATEGORIA_ACTIVA = uuid(11)
+
+const kudoFalso = (id, autor, destinatario, contenido, fecha, extra = {}) => ({
+  id,
+  idAutor: autor.id,
+  nombreAutor: autor.nombre,
+  idDestinatario: destinatario.id,
+  nombreDestinatario: destinatario.nombre,
+  idCategoria: CATEGORIA_ACTIVA,
+  nombreCategoria: 'Liderazgo',
+  contenido,
+  fechaCreacion: fecha,
+  estado: 'VISIBLE',
+  cantidadVisualizaciones: 3,
+  promedioCalificacion: 4.5,
+  cantidadCalificaciones: 2,
+  ...extra,
+})
+
+const kudosIniciales = () => [
+  kudoFalso(
+    ID_KUDO.primero,
+    { id: ID.usuario, nombre: 'Andrea Ríos' },
+    PERSONAS[0],
+    'Gracias por liderar el semillero.',
+    '2026-11-10T10:00:00',
+  ),
+  kudoFalso(
+    ID_KUDO.segundo,
+    PERSONAS[1],
+    PERSONAS[0],
+    'Excelente trabajo. '.repeat(30).trim(),
+    '2026-11-09T09:00:00',
+    {
+      idCategoria: uuid(12),
+      nombreCategoria: 'Trabajo en equipo',
+    },
+  ),
+]
+
+const KUDOS_POR_PAGINA = 10
+
+function muro(parametros) {
+  const categoria = parametros.get('categoria')
+  const persona = parametros.get('persona')
+  const pagina = Number(parametros.get('pagina') ?? 1)
+  const filtrados = kudos.filter(
+    (k) =>
+      (!categoria || k.idCategoria === categoria) &&
+      (!persona || k.idAutor === persona || k.idDestinatario === persona),
+  )
+  const desde = (pagina - 1) * KUDOS_POR_PAGINA
+  return ok([
+    {
+      kudos: filtrados.slice(desde, desde + KUDOS_POR_PAGINA),
+      pagina,
+      totalPaginas: Math.ceil(filtrados.length / KUDOS_POR_PAGINA),
+      totalKudos: filtrados.length,
+    },
+  ])
+}
+
+function crearKudo(cuerpo) {
+  if (cuerpo.idDestinatario === usuarioActual.id) {
+    return error('No puedes darte un Kudo a ti mismo. Elige a otra persona.')
+  }
+  const destinatario = PERSONAS.find((p) => p.id === cuerpo.idDestinatario)
+  kudos.unshift(
+    kudoFalso(
+      uuid(103),
+      { id: usuarioActual.id, nombre: `${usuarioActual.nombres} ${usuarioActual.apellidos}` },
+      destinatario,
+      cuerpo.contenido,
+      '2026-11-10T12:00:00',
+      {
+        cantidadVisualizaciones: 0,
+        promedioCalificacion: 0,
+        cantidadCalificaciones: 0,
+      },
+    ),
+  )
+  return ok()
+}
+
+function verKudo(id) {
+  const kudo = kudos.find((k) => k.id === id)
+  if (!kudo) return error('El Kudo indicado no existe.')
+  if (kudo.idAutor !== usuarioActual.id) kudo.cantidadVisualizaciones += 1
+  return ok([kudo])
+}
+
+function historial(idPersona, tipo) {
+  return ok(
+    kudos.filter(
+      (k) =>
+        (tipo !== 'emitidos' && k.idDestinatario === idPersona) ||
+        (tipo !== 'recibidos' && k.idAutor === idPersona),
+    ),
+  )
+}
+
+function atenderKudos(metodo, ruta, parametros, cuerpo) {
+  if (metodo === 'GET' && ruta === '/api/kudos') return muro(parametros)
+  if (metodo === 'POST' && ruta === '/api/kudos') return crearKudo(cuerpo)
+  if (metodo === 'GET' && ruta === '/api/personas') {
+    const texto = (parametros.get('texto') ?? '').toLowerCase()
+    return ok(PERSONAS.filter((p) => p.nombre.toLowerCase().includes(texto)))
+  }
+  const detalle = ruta.match(/^\/api\/kudos\/([^/]+)$/)
+  if (metodo === 'GET' && detalle) return verKudo(detalle[1])
+  const deUsuario = ruta.match(/^\/api\/usuarios\/([^/]+)\/kudos$/)
+  if (metodo === 'GET' && deUsuario) return historial(deUsuario[1], parametros.get('tipo'))
+  return null
+}
 let facultades = []
 let programas = []
 let vinculos = []
@@ -610,7 +735,9 @@ function atenderCategorias(metodo, ruta, cuerpo) {
 
 export const peticiones = []
 
-function atender(metodo, ruta, cuerpo) {
+function atender(metodo, url, cuerpo) {
+  const [ruta, textoConsulta = ''] = url.split('?')
+  const parametros = new URLSearchParams(textoConsulta)
   if (!sesionActiva) return sinCuerpo(401)
 
   if (metodo === 'GET' && ruta === '/api/autenticacion') {
@@ -622,6 +749,10 @@ function atender(metodo, ruta, cuerpo) {
   }
   if (ruta.startsWith('/api/categorias')) {
     const respuesta = atenderCategorias(metodo, ruta, cuerpo)
+    if (respuesta) return respuesta
+  }
+  if (/^\/api\/(kudos|personas|usuarios\/[^/]+\/kudos)/.test(ruta)) {
+    const respuesta = atenderKudos(metodo, ruta, parametros, cuerpo)
     if (respuesta) return respuesta
   }
   if (/^\/api\/(facultades|programas|vinculos|estructura|cuenta\/vinculos)/.test(ruta)) {
@@ -646,6 +777,7 @@ export function iniciarServidorFalso({ conSesion = true, usuario = USUARIO_ACTIV
   codigoPendiente = '123456'
   cuenta = cuentaDe(usuario)
   solicitudes = SOLICITUDES_INICIALES.map((s) => ({ ...s }))
+  kudos = kudosIniciales()
   facultades = FACULTADES_INICIALES.map((f) => ({ ...f }))
   programas = PROGRAMAS_INICIALES.map((p) => ({ ...p }))
   vinculos = VINCULOS_INICIALES.map((v) => ({ ...v }))

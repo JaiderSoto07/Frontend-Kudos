@@ -37,7 +37,7 @@ export const routes = [
       {
         path: 'inicio',
         name: 'inicio',
-        component: () => import('@/modules/inicio/views/InicioView.vue'),
+        component: () => import('@/modules/kudos/views/MuroView.vue'),
         meta: { title: 'Inicio' },
       },
       {
@@ -57,6 +57,26 @@ export const routes = [
         name: 'autoridades',
         component: () => import('@/modules/autoridades/views/RegistrarAutoridadView.vue'),
         meta: { title: 'Registrar autoridad', roles: ROLES_QUE_REGISTRAN_AUTORIDADES },
+      },
+      {
+        path: 'kudos/:id',
+        name: 'kudo-detalle',
+        component: () => import('@/modules/kudos/views/KudoDetalleView.vue'),
+        props: true,
+        meta: { title: 'Kudo' },
+      },
+      {
+        path: 'personas/:id/kudos',
+        name: 'historial-kudos',
+        component: () => import('@/modules/kudos/views/HistorialKudosView.vue'),
+        props: true,
+        meta: { title: 'Kudos de la persona' },
+      },
+      {
+        path: 'mis-kudos',
+        name: 'mis-kudos',
+        component: () => import('@/modules/kudos/views/HistorialKudosView.vue'),
+        meta: { title: 'Mis Kudos' },
       },
       {
         path: 'estructura',
