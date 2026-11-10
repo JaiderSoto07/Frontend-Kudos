@@ -1,0 +1,71 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import MainLayout from '@/layouts/MainLayout.vue'
+import { alSesionVencida } from '@/api/http'
+import { useSesionStore } from '@/stores/sesionStore'
+import { RUTA_ESTADO_CUENTA, RUTA_INICIO } from './inicio'
+
+export const routes = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/modules/autenticacion/views/LoginView.vue'),
+    meta: { title: 'Iniciar sesión', publica: true },
+  },
+  {
+    path: '/estado-cuenta',
+    name: 'estado-cuenta',
+    component: () => import('@/modules/autenticacion/views/EstadoCuentaView.vue'),
+    meta: { title: 'Estado de la cuenta', sinCuentaActiva: true },
+  },
+  {
+    path: '/',
+    component: MainLayout,
+    children: [
+      { path: '', redirect: RUTA_INICIO },
+      {
+        path: 'inicio',
+        name: 'inicio',
+        component: () => import('@/modules/inicio/views/InicioView.vue'),
+        meta: { title: 'Inicio' },
+      },
+    ],
+  },
+  { path: '/:pathMatch(.*)*', redirect: RUTA_INICIO },
+]
+
+export function protegerRutas(router) {
+  router.beforeEach(async (to) => {
+    const sesion = useSesionStore()
+    if (!sesion.verificada) await sesion.cargarSesion()
+    const publica = to.matched.some((r) => r.meta.publica)
+    const sinCuentaActiva = to.matched.some((r) => r.meta.sinCuentaActiva)
+
+    if (!sesion.autenticada) return publica ? true : { name: 'login' }
+    if (!sesion.cuentaActiva) return sinCuentaActiva ? true : RUTA_ESTADO_CUENTA
+    if (publica || sinCuentaActiva) return RUTA_INICIO
+
+    const rolesPermitidos = to.matched.flatMap((r) => r.meta.roles ?? [])
+    if (!sesion.tieneRol(rolesPermitidos)) return RUTA_INICIO
+    return true
+  })
+
+  alSesionVencida((error) => {
+    const sesion = useSesionStore()
+    if (!sesion.autenticada) return
+    sesion.olvidarSesion(error.message)
+    router.replace({ name: 'login' })
+  })
+}
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes,
+})
+
+protegerRutas(router)
+
+router.afterEach((to) => {
+  document.title = to.meta.title ? `${to.meta.title} · UCO Kudos` : 'UCO Kudos'
+})
+
+export default router
