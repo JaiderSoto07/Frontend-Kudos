@@ -3,7 +3,7 @@ import MainLayout from '@/layouts/MainLayout.vue'
 import { alSesionVencida } from '@/api/http'
 import { useSesionStore } from '@/stores/sesionStore'
 import { ROLES_GESTORES_CATEGORIAS } from '@/shared/domain/cuenta'
-import { RUTA_ESTADO_CUENTA, RUTA_INICIO } from './inicio'
+import { RUTA_ESTADO_CUENTA, RUTA_INICIO, RUTA_REGISTRO } from './inicio'
 
 export const routes = [
   {
@@ -11,6 +11,12 @@ export const routes = [
     name: 'login',
     component: () => import('@/modules/autenticacion/views/LoginView.vue'),
     meta: { title: 'Iniciar sesión', publica: true },
+  },
+  {
+    path: '/registro',
+    name: 'registro',
+    component: () => import('@/modules/identidad/views/RegistroView.vue'),
+    meta: { title: 'Solicitar cuenta', soloSinRegistro: true },
   },
   {
     path: '/estado-cuenta',
@@ -35,6 +41,12 @@ export const routes = [
         component: () => import('@/modules/categorias/views/CategoriasView.vue'),
         meta: { title: 'Categorías', roles: ROLES_GESTORES_CATEGORIAS },
       },
+      {
+        path: 'mi-cuenta',
+        name: 'mi-cuenta',
+        component: () => import('@/modules/identidad/views/PerfilView.vue'),
+        meta: { title: 'Mi cuenta' },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: RUTA_INICIO },
@@ -46,8 +58,11 @@ export function protegerRutas(router) {
     if (!sesion.verificada) await sesion.cargarSesion()
     const publica = to.matched.some((r) => r.meta.publica)
     const sinCuentaActiva = to.matched.some((r) => r.meta.sinCuentaActiva)
+    const soloSinRegistro = to.matched.some((r) => r.meta.soloSinRegistro)
 
     if (!sesion.autenticada) return publica ? true : { name: 'login' }
+    if (!sesion.registrado) return soloSinRegistro ? true : RUTA_REGISTRO
+    if (soloSinRegistro) return sesion.cuentaActiva ? RUTA_INICIO : RUTA_ESTADO_CUENTA
     if (!sesion.cuentaActiva) return sinCuentaActiva ? true : RUTA_ESTADO_CUENTA
     if (publica || sinCuentaActiva) return RUTA_INICIO
 

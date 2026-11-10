@@ -34,11 +34,29 @@ const NOMBRES_ESTADO = {
   [ESTADO_CUENTA.DESACTIVADA]: 'Desactivada',
 }
 
+export const ESTADO_SOLICITUD = Object.freeze({
+  PENDIENTE: 'PENDIENTE',
+  APROBADA: 'APROBADA',
+  RECHAZADA: 'RECHAZADA',
+})
+
+const NOMBRES_ESTADO_SOLICITUD = {
+  [ESTADO_SOLICITUD.PENDIENTE]: 'Pendiente',
+  [ESTADO_SOLICITUD.APROBADA]: 'Aprobada',
+  [ESTADO_SOLICITUD.RECHAZADA]: 'Rechazada',
+}
+
 export const ROLES_GESTORES_CATEGORIAS = [ROL.ADMINISTRADOR, ROL.RECTOR, ROL.COORDINADOR_ACADEMICO]
+
+export const ROLES_CON_PROGRAMA = [ROL.ESTUDIANTE, ROL.DOCENTE, ROL.COORDINADOR_PROGRAMA]
+
+export const ROLES_CON_FACULTAD = [ROL.COORDINADOR_FACULTAD]
 
 export const nombreRol = (rol) => NOMBRES_ROL[rol] ?? ''
 
 export const nombreEstadoCuenta = (estado) => NOMBRES_ESTADO[estado] ?? ''
+
+export const nombreEstadoSolicitud = (estado) => NOMBRES_ESTADO_SOLICITUD[estado] ?? ''
 
 export const tieneAlgunRol = (rol, rolesPermitidos) =>
   !rolesPermitidos?.length || rolesPermitidos.includes(rol)

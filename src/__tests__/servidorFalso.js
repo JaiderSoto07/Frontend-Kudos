@@ -46,7 +46,39 @@ export const USUARIO_DOCENTE = {
   rol: 'DOCENTE',
 }
 
+export const USUARIO_PENDIENTE_VERIFICACION = {
+  ...USUARIO_ACTIVO,
+  estadoCuenta: 'PENDIENTE_VERIFICACION',
+  rol: 'ESTUDIANTE',
+  mensajeEstado:
+    'Tu cuenta ya fue aprobada, pero aún debes verificar tu celular con el código que te enviamos.',
+}
+
+export const OPCIONES_REGISTRO = {
+  roles: [
+    'COORDINADOR_ACADEMICO',
+    'COORDINADOR_FACULTAD',
+    'COORDINADOR_PROGRAMA',
+    'DOCENTE',
+    'ESTUDIANTE',
+  ],
+  facultades: [{ id: uuid(21), nombre: 'Ingeniería', estado: 'ACTIVA' }],
+  programas: [
+    {
+      id: uuid(31),
+      nombre: 'Ingeniería de Sistemas',
+      idFacultad: uuid(21),
+      nombreFacultad: 'Ingeniería',
+      activo: true,
+    },
+  ],
+}
+
 export const MENSAJES = {
+  codigoIncorrecto:
+    'El código no es correcto. Revisa el último código que te enviamos e intenta de nuevo.',
+  celularRepetido:
+    'Ya existe una cuenta registrada con ese número celular. Por favor usa otro número.',
   sinPermiso:
     'No tiene permiso para gestionar categorías. Solo el Administrador, el Rector y el Coordinador Académico pueden crear, modificar, activar, desactivar o ver las categorías inactivas.',
   nombreRepetido:
@@ -86,6 +118,120 @@ let sesionActiva = true
 let usuarioActual = USUARIO_ACTIVO
 let categorias = []
 let siguienteCategoria = 100
+let cuenta = null
+let codigoPendiente = '123456'
+
+export const CELULAR_OCUPADO = '3209998877'
+
+export const cuentaGuardada = () => cuenta
+
+export const codigoEnviado = () => codigoPendiente
+
+const avisoCodigo = (codigo) =>
+  `Tu código de verificación de UCO Kudos es ${codigo}. Vence en 15 minutos.`
+
+function cuentaDe(usuario) {
+  if (!usuario.registrado) return null
+  const celularVerificado = usuario.estadoCuenta === 'ACTIVA'
+  const aprobada = usuario.estadoCuenta !== 'PENDIENTE_APROBACION'
+  return {
+    id: usuario.id,
+    nombres: usuario.nombres,
+    apellidos: usuario.apellidos,
+    correoInstitucional: usuario.correoInstitucional,
+    correoVerificado: true,
+    numeroCelular: '3001234567',
+    celularVerificado,
+    aprobada,
+    estadoCuenta: usuario.estadoCuenta,
+    mensajeEstado: usuario.mensajeEstado,
+    rol: usuario.rol,
+    rolSolicitado: usuario.rol || 'ESTUDIANTE',
+    estadoSolicitud: aprobada ? 'APROBADA' : 'PENDIENTE',
+    motivoRechazo: '',
+    ultimoCodigoEnviado: celularVerificado ? '' : avisoCodigo(codigoPendiente),
+  }
+}
+
+function cambiarEstadoCuenta(estado, mensajeEstado = '') {
+  cuenta.estadoCuenta = estado
+  cuenta.mensajeEstado = mensajeEstado
+  usuarioActual = { ...usuarioActual, estadoCuenta: estado, mensajeEstado }
+}
+
+function enviarCodigo(codigo) {
+  codigoPendiente = codigo
+  cuenta.ultimoCodigoEnviado = avisoCodigo(codigo)
+}
+
+function registrar(cuerpo) {
+  if (cuerpo.numeroCelular === CELULAR_OCUPADO) return error(MENSAJES.celularRepetido)
+  usuarioActual = {
+    ...usuarioActual,
+    id: uuid(2),
+    nombres: cuerpo.nombres,
+    apellidos: cuerpo.apellidos,
+    estadoCuenta: 'PENDIENTE_APROBACION',
+    rol: '',
+    registrado: true,
+    mensajeEstado: USUARIO_PENDIENTE.mensajeEstado,
+  }
+  cuenta = {
+    ...cuentaDe(usuarioActual),
+    rolSolicitado: cuerpo.rolSolicitado,
+    numeroCelular: cuerpo.numeroCelular,
+  }
+  enviarCodigo('123456')
+  return ok()
+}
+
+function verificar(cuerpo) {
+  if (cuerpo.codigo !== codigoPendiente) return error(MENSAJES.codigoIncorrecto)
+  Object.assign(cuenta, { celularVerificado: true, ultimoCodigoEnviado: '' })
+  if (cuenta.aprobada && cuenta.correoVerificado) cambiarEstadoCuenta('ACTIVA')
+  return ok()
+}
+
+function cambiarCelular(cuerpo) {
+  if (cuerpo.numeroCelular === CELULAR_OCUPADO) return error(MENSAJES.celularRepetido)
+  Object.assign(cuenta, { numeroCelular: cuerpo.numeroCelular, celularVerificado: false })
+  if (cuenta.estadoCuenta === 'ACTIVA') {
+    cambiarEstadoCuenta('PENDIENTE_VERIFICACION', USUARIO_PENDIENTE_VERIFICACION.mensajeEstado)
+  }
+  enviarCodigo('777777')
+  return ok()
+}
+
+function atenderIdentidad(metodo, ruta, cuerpo) {
+  const peticion = `${metodo} ${ruta}`
+  if (peticion === 'GET /api/registros/opciones') return ok([OPCIONES_REGISTRO])
+  if (peticion === 'POST /api/registros') return registrar(cuerpo)
+  if (!cuenta) return error('Aún no tienes una cuenta en UCO Kudos con este correo.', 403)
+
+  switch (peticion) {
+    case 'GET /api/cuenta':
+      return ok([cuenta])
+    case 'POST /api/verificaciones/celular':
+      return verificar(cuerpo)
+    case 'POST /api/verificaciones/celular/reenvio':
+      enviarCodigo('654321')
+      return ok()
+    case 'PUT /api/cuenta/datos-personales':
+      Object.assign(cuenta, { nombres: cuerpo.nombres, apellidos: cuerpo.apellidos })
+      usuarioActual = { ...usuarioActual, nombres: cuerpo.nombres, apellidos: cuerpo.apellidos }
+      return ok()
+    case 'PUT /api/cuenta/celular':
+      return cambiarCelular(cuerpo)
+    case 'PUT /api/cuenta/correo':
+      Object.assign(cuenta, {
+        correoInstitucional: cuerpo.correoInstitucional,
+        correoVerificado: false,
+      })
+      return ok()
+    default:
+      return null
+  }
+}
 
 export const categoriasGuardadas = () => categorias
 
@@ -157,12 +303,18 @@ function atender(metodo, ruta, cuerpo) {
     const respuesta = atenderCategorias(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
   }
+  if (/^\/api\/(registros|cuenta|verificaciones)/.test(ruta)) {
+    const respuesta = atenderIdentidad(metodo, ruta, cuerpo)
+    if (respuesta) return respuesta
+  }
   return responder(404, sobre('ERROR', [], [`Este recurso no existe: ${ruta}`]))
 }
 
 export function iniciarServidorFalso({ conSesion = true, usuario = USUARIO_ACTIVO } = {}) {
   sesionActiva = conSesion
   usuarioActual = usuario
+  codigoPendiente = '123456'
+  cuenta = cuentaDe(usuario)
   categorias = CATEGORIAS_INICIALES.map((c) => ({ ...c }))
   peticiones.length = 0
 

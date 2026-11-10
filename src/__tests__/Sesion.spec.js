@@ -103,13 +103,14 @@ describe('Estado de la cuenta (Google dice quién eres, la base decide si entras
     wrapper.unmount()
   })
 
-  it('un correo sin registrar va a la pantalla de estado con el mensaje del back-end', async () => {
+  it('un correo sin registrar va al formulario de registro con su correo de Google', async () => {
     iniciarServidorFalso({ usuario: USUARIO_NO_REGISTRADO })
     const { wrapper, router } = await montarApp('/inicio')
-    expect(router.currentRoute.value.name).toBe('estado-cuenta')
-    expect(wrapper.text()).toContain('Aún no tienes una cuenta')
+    expect(router.currentRoute.value.name).toBe('registro')
+    expect(wrapper.text()).toContain('Solicita tu cuenta')
     expect(wrapper.text()).toContain('nuevo@gmail.com')
-    expect(wrapper.find('[role="status"]').text()).toBe(USUARIO_NO_REGISTRADO.mensajeEstado)
+    await router.push('/estado-cuenta')
+    expect(router.currentRoute.value.name).toBe('registro')
     wrapper.unmount()
   })
 

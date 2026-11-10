@@ -1,19 +1,42 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '@/components/icons/AppIcon.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import EstadoValidaciones from '@/modules/identidad/components/EstadoValidaciones.vue'
+import VerificacionCelular from '@/modules/identidad/components/VerificacionCelular.vue'
+import { useCuentaStore } from '@/modules/identidad/stores/cuentaStore'
+import { RUTA_INICIO } from '@/router/inicio'
 import { useSesionStore } from '@/stores/sesionStore'
-import { nombreEstadoCuenta } from '@/shared/domain/cuenta'
+import { ESTADO_CUENTA, nombreEstadoCuenta } from '@/shared/domain/cuenta'
 
 const sesion = useSesionStore()
+const cuentaStore = useCuentaStore()
 const router = useRouter()
 const saliendo = ref(false)
+
+const ESTADOS_SIN_VERIFICACION = [ESTADO_CUENTA.SUSPENDIDA, ESTADO_CUENTA.DESACTIVADA]
 
 const titulo = computed(() =>
   sesion.registrado ? 'Tu cuenta aún no está activa' : 'Aún no tienes una cuenta',
 )
 const estado = computed(() => nombreEstadoCuenta(sesion.usuario?.estadoCuenta))
+const puedeVerificarCelular = computed(
+  () =>
+    cuentaStore.cuenta &&
+    !cuentaStore.cuenta.celularVerificado &&
+    !ESTADOS_SIN_VERIFICACION.includes(cuentaStore.cuenta.estadoCuenta),
+)
+
+onMounted(() => {
+  if (sesion.registrado) cuentaStore.cargar()
+})
+
+async function celularVerificado() {
+  await sesion.cargarSesion()
+  if (sesion.cuentaActiva) router.replace(RUTA_INICIO)
+  else await cuentaStore.recargar()
+}
 
 async function cerrarSesion() {
   saliendo.value = true
@@ -39,6 +62,10 @@ async function cerrarSesion() {
       </p>
       <p class="estado__mensaje" role="status">{{ sesion.usuario?.mensajeEstado }}</p>
 
+      <EstadoValidaciones v-if="cuentaStore.cuenta" :cuenta="cuentaStore.cuenta" />
+      <p v-if="cuentaStore.error" class="estado__error" role="alert">{{ cuentaStore.error }}</p>
+      <VerificacionCelular v-if="puedeVerificarCelular" @verificado="celularVerificado" />
+
       <BaseButton variant="outline" class="estado__salir" :loading="saliendo" @click="cerrarSesion">
         <AppIcon name="logout" :size="18" /> Ingresar con otra cuenta
       </BaseButton>
@@ -61,7 +88,7 @@ async function cerrarSesion() {
   flex-direction: column;
   gap: var(--space-5);
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   padding: var(--space-8);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -111,5 +138,10 @@ async function cerrarSesion() {
 
 .estado__salir {
   width: 100%;
+}
+
+.estado__error {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
 }
 </style>

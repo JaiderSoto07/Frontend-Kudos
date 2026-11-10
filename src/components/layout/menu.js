@@ -3,6 +3,7 @@ import { ROLES_GESTORES_CATEGORIAS } from '@/shared/domain/cuenta'
 export const GRUPOS_MENU = [
   [{ label: 'Inicio', icon: 'home', to: '/inicio' }],
   [{ label: 'Categorías', icon: 'tag', to: '/categorias', roles: ROLES_GESTORES_CATEGORIAS }],
+  [{ label: 'Mi cuenta', icon: 'user', to: '/mi-cuenta' }],
 ]
 
 export function menuSegunRol(tieneRol) {
