@@ -1,19 +1,13 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '@/components/icons/AppIcon.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import BaseSelect from '@/components/ui/BaseSelect.vue'
 import { RUTA_ESTADO_CUENTA } from '@/router/inicio'
-import { nombreRol } from '@/shared/domain/cuenta'
 import { useSesionStore } from '@/stores/sesionStore'
+import RolAmbitoCampos from '../components/RolAmbitoCampos.vue'
 import { identidadService } from '../services/identidadService'
-import {
-  LIMITES,
-  necesitaFacultad,
-  necesitaPrograma,
-  validarRegistro,
-} from '../utils/identidadValidations'
+import { LIMITES, validarRegistro } from '../utils/identidadValidations'
 
 const sesion = useSesionStore()
 const router = useRouter()
@@ -32,27 +26,6 @@ const errorServidor = ref('')
 const cargando = ref(true)
 const enviando = ref(false)
 const saliendo = ref(false)
-
-const opcionesRol = computed(() =>
-  opciones.value.roles.map((rol) => ({ value: rol, label: nombreRol(rol) })),
-)
-const opcionesPrograma = computed(() =>
-  opciones.value.programas.map((p) => ({
-    value: p.id,
-    label: `${p.nombre} · ${p.nombreFacultad}`,
-  })),
-)
-const opcionesFacultad = computed(() =>
-  opciones.value.facultades.map((f) => ({ value: f.id, label: f.nombre })),
-)
-
-watch(
-  () => formulario.rol,
-  () => {
-    formulario.idPrograma = ''
-    formulario.idFacultad = ''
-  },
-)
 
 onMounted(async () => {
   try {
@@ -146,34 +119,13 @@ async function salir() {
           <p v-if="errores.celular" class="field-error">{{ errores.celular }}</p>
         </div>
 
-        <BaseSelect
-          v-model="formulario.rol"
-          class="registro__rol"
-          label="Rol que solicitas"
-          placeholder="Elige un rol"
-          :options="opcionesRol"
+        <RolAmbitoCampos
+          v-model:rol="formulario.rol"
+          v-model:id-programa="formulario.idPrograma"
+          v-model:id-facultad="formulario.idFacultad"
+          :opciones="opciones"
+          :errores="errores"
           :disabled="cargando"
-          :error="errores.rol"
-        />
-
-        <BaseSelect
-          v-if="necesitaPrograma(formulario.rol)"
-          v-model="formulario.idPrograma"
-          class="registro__programa"
-          label="Programa académico"
-          placeholder="Elige tu Programa"
-          :options="opcionesPrograma"
-          :error="errores.idPrograma"
-        />
-
-        <BaseSelect
-          v-if="necesitaFacultad(formulario.rol)"
-          v-model="formulario.idFacultad"
-          class="registro__facultad"
-          label="Facultad"
-          placeholder="Elige la Facultad"
-          :options="opcionesFacultad"
-          :error="errores.idFacultad"
         />
 
         <p v-if="errorServidor" class="registro__error" role="alert">{{ errorServidor }}</p>

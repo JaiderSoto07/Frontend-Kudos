@@ -43,6 +43,17 @@ export const desdeDto = {
     programas: (dto.programas ?? []).map(desdeDto.programa),
   }),
 
+  solicitud: (dto) => ({
+    id: idDe(dto),
+    nombreSolicitante: dto.nombreSolicitante ?? '',
+    correoSolicitante: dto.correoSolicitante ?? '',
+    rolSolicitado: dto.rolSolicitado ?? '',
+    nombreFacultad: dto.nombreFacultad ?? '',
+    nombrePrograma: dto.nombrePrograma ?? '',
+    estado: dto.estado ?? '',
+    fechaSolicitud: dto.fechaSolicitud ?? '',
+  }),
+
   cuenta: (dto) => ({
     id: idDe(dto),
     nombres: dto.nombres ?? '',
@@ -91,4 +102,14 @@ export const haciaDto = {
   correo: (correo) => ({ correoInstitucional: texto(correo).toLowerCase() }),
 
   codigo: (codigo) => ({ codigo: texto(codigo) }),
+
+  rechazo: (motivo) => ({ motivo: texto(motivo) }),
+
+  autoridad: (datos) => ({
+    rol: datos.rol,
+    nombres: texto(datos.nombres),
+    apellidos: texto(datos.apellidos),
+    correoInstitucional: texto(datos.correo).toLowerCase(),
+    numeroCelular: texto(datos.celular),
+  }),
 }

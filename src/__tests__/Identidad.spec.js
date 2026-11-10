@@ -56,11 +56,11 @@ describe('Registro con el correo de Google (CU-016)', () => {
   it('trae el nombre de Google, pide el Programa según el rol y envía la solicitud', async () => {
     iniciarServidorFalso({ usuario: USUARIO_GOOGLE })
     const { wrapper, router } = await montarApp('/registro')
-    await esperar(() => wrapper.findAll('.registro__rol option').length > 1)
+    await esperar(() => wrapper.findAll('.campo-rol option').length > 1)
 
     expect(wrapper.find('#registro-nombres').element.value).toBe('Sofía')
     expect(wrapper.find('#registro-apellidos').element.value).toBe('Henao')
-    expect(wrapper.find('.registro__programa').exists()).toBe(false)
+    expect(wrapper.find('.campo-programa').exists()).toBe(false)
 
     await wrapper.find('.registro__form').trigger('submit')
     expect(wrapper.text()).toContain('El número celular es obligatorio.')
@@ -68,11 +68,9 @@ describe('Registro con el correo de Google (CU-016)', () => {
     expect(peticionesA('POST', '/api/registros')).toHaveLength(0)
 
     await wrapper.find('#registro-celular').setValue('3157654321')
-    await wrapper.find('.registro__rol select').setValue('ESTUDIANTE')
-    expect(wrapper.find('.registro__programa').text()).toContain(
-      'Ingeniería de Sistemas · Ingeniería',
-    )
-    await wrapper.find('.registro__programa select').setValue(ID_PROGRAMA)
+    await wrapper.find('.campo-rol select').setValue('ESTUDIANTE')
+    expect(wrapper.find('.campo-programa').text()).toContain('Ingeniería de Sistemas · Ingeniería')
+    await wrapper.find('.campo-programa select').setValue(ID_PROGRAMA)
     await wrapper.find('.registro__form').trigger('submit')
 
     await esperar(() => router.currentRoute.value.name === 'estado-cuenta')
@@ -93,12 +91,12 @@ describe('Registro con el correo de Google (CU-016)', () => {
   it('el Coordinador de Facultad elige una Facultad y no un Programa', async () => {
     iniciarServidorFalso({ usuario: USUARIO_GOOGLE })
     const { wrapper } = await montarApp('/registro')
-    await esperar(() => wrapper.findAll('.registro__rol option').length > 1)
+    await esperar(() => wrapper.findAll('.campo-rol option').length > 1)
 
     await wrapper.find('#registro-celular').setValue('3157654321')
-    await wrapper.find('.registro__rol select').setValue('COORDINADOR_FACULTAD')
-    expect(wrapper.find('.registro__programa').exists()).toBe(false)
-    await wrapper.find('.registro__facultad select').setValue(ID_FACULTAD)
+    await wrapper.find('.campo-rol select').setValue('COORDINADOR_FACULTAD')
+    expect(wrapper.find('.campo-programa').exists()).toBe(false)
+    await wrapper.find('.campo-facultad select').setValue(ID_FACULTAD)
     await wrapper.find('.registro__form').trigger('submit')
 
     await esperar(() => peticionesA('POST', '/api/registros').length === 1)
@@ -113,10 +111,10 @@ describe('Registro con el correo de Google (CU-016)', () => {
   it('si el back-end rechaza la solicitud se muestra su mensaje', async () => {
     iniciarServidorFalso({ usuario: USUARIO_GOOGLE })
     const { wrapper, router } = await montarApp('/registro')
-    await esperar(() => wrapper.findAll('.registro__rol option').length > 1)
+    await esperar(() => wrapper.findAll('.campo-rol option').length > 1)
 
     await wrapper.find('#registro-celular').setValue(CELULAR_OCUPADO)
-    await wrapper.find('.registro__rol select').setValue('COORDINADOR_ACADEMICO')
+    await wrapper.find('.campo-rol select').setValue('COORDINADOR_ACADEMICO')
     await wrapper.find('.registro__form').trigger('submit')
 
     await esperar(() => wrapper.find('.registro__error').exists())

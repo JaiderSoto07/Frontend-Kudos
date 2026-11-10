@@ -69,17 +69,21 @@ export function validarCorreo(correo, correoActual = '') {
   return ''
 }
 
-export function validarRegistro(datos) {
-  const errores = validarDatosPersonales(datos)
-  const errorCelular = validarCelular(datos.celular)
-  if (errorCelular) errores.celular = errorCelular
-
+export function validarAmbito(datos) {
+  const errores = {}
   if (!datos.rol) errores.rol = MENSAJES_FORMULARIO.rolRequerido
   else if (necesitaPrograma(datos.rol) && !datos.idPrograma) {
     errores.idPrograma = MENSAJES_FORMULARIO.programaRequerido
   } else if (necesitaFacultad(datos.rol) && !datos.idFacultad) {
     errores.idFacultad = MENSAJES_FORMULARIO.facultadRequerida
   }
+  return errores
+}
+
+export function validarRegistro(datos) {
+  const errores = { ...validarDatosPersonales(datos), ...validarAmbito(datos) }
+  const errorCelular = validarCelular(datos.celular)
+  if (errorCelular) errores.celular = errorCelular
   return errores
 }
 

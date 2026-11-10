@@ -17,6 +17,10 @@ export const identidadService = {
     await http.post('/registros', haciaDto.registro(datos))
   },
 
+  enviarNuevaSolicitud: async (datos) => {
+    await http.post('/registros/nueva-solicitud', haciaDto.registro(datos))
+  },
+
   verificarCelular: async (codigo) => {
     await http.post('/verificaciones/celular', haciaDto.codigo(codigo))
   },

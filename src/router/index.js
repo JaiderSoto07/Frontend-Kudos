@@ -2,7 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
 import { alSesionVencida } from '@/api/http'
 import { useSesionStore } from '@/stores/sesionStore'
-import { ROLES_GESTORES_CATEGORIAS } from '@/shared/domain/cuenta'
+import {
+  ROLES_APROBADORES,
+  ROLES_GESTORES_CATEGORIAS,
+  ROLES_QUE_REGISTRAN_AUTORIDADES,
+} from '@/shared/domain/cuenta'
 import { RUTA_ESTADO_CUENTA, RUTA_INICIO, RUTA_REGISTRO } from './inicio'
 
 export const routes = [
@@ -40,6 +44,18 @@ export const routes = [
         name: 'categorias',
         component: () => import('@/modules/categorias/views/CategoriasView.vue'),
         meta: { title: 'Categorías', roles: ROLES_GESTORES_CATEGORIAS },
+      },
+      {
+        path: 'solicitudes',
+        name: 'solicitudes',
+        component: () => import('@/modules/solicitudes/views/SolicitudesView.vue'),
+        meta: { title: 'Solicitudes', roles: ROLES_APROBADORES },
+      },
+      {
+        path: 'autoridades',
+        name: 'autoridades',
+        component: () => import('@/modules/autoridades/views/RegistrarAutoridadView.vue'),
+        meta: { title: 'Registrar autoridad', roles: ROLES_QUE_REGISTRAN_AUTORIDADES },
       },
       {
         path: 'mi-cuenta',

@@ -54,6 +54,21 @@ export const USUARIO_PENDIENTE_VERIFICACION = {
     'Tu cuenta ya fue aprobada, pero aún debes verificar tu celular con el código que te enviamos.',
 }
 
+export const USUARIO_RECHAZADO = {
+  ...USUARIO_PENDIENTE,
+  solicitudRechazada: true,
+}
+
+export const USUARIO_COORDINADOR = {
+  ...USUARIO_ACTIVO,
+  nombres: 'Juan Pablo',
+  apellidos: 'Zuluaga',
+  correoInstitucional: 'jzuluaga@gmail.com',
+  rol: 'COORDINADOR_PROGRAMA',
+}
+
+export const MOTIVO_RECHAZO_PREVIO = 'No perteneces al Programa que elegiste.'
+
 export const OPCIONES_REGISTRO = {
   roles: [
     'COORDINADOR_ACADEMICO',
@@ -75,6 +90,11 @@ export const OPCIONES_REGISTRO = {
 }
 
 export const MENSAJES = {
+  motivoCorto: 'El motivo del rechazo debe tener entre 10 y 250 caracteres.',
+  rectorExiste: 'Ya hay un Rector vigente. Solo puede haber uno a la vez.',
+  sinPermisoSolicitudes:
+    'No tienes permiso para revisar solicitudes. Solo el Rector y los coordinadores aprueban o rechazan solicitudes de cuenta.',
+  soloAdministrador: 'Solo un Administrador puede registrar al Rector o a otros Administradores.',
   codigoIncorrecto:
     'El código no es correcto. Revisa el último código que te enviamos e intenta de nuevo.',
   celularRepetido:
@@ -130,6 +150,61 @@ export const codigoEnviado = () => codigoPendiente
 const avisoCodigo = (codigo) =>
   `Tu código de verificación de UCO Kudos es ${codigo}. Vence en 15 minutos.`
 
+function estadoSolicitudDe(usuario, aprobada) {
+  if (usuario.solicitudRechazada) return 'RECHAZADA'
+  return aprobada ? 'APROBADA' : 'PENDIENTE'
+}
+
+const solicitudPendiente = (n, nombre, rol, programa) => ({
+  id: uuid(n),
+  idSolicitante: uuid(n + 100),
+  nombreSolicitante: nombre,
+  correoSolicitante: `${nombre.split(' ')[0].toLowerCase()}@gmail.com`,
+  rolSolicitado: rol,
+  nombreFacultad: '',
+  nombrePrograma: programa,
+  estado: 'PENDIENTE',
+  fechaSolicitud: '2026-11-10T10:41:10',
+  motivoRechazo: '',
+})
+
+const SOLICITUDES_INICIALES = [
+  solicitudPendiente(41, 'Sofía Henao', 'ESTUDIANTE', 'Ingeniería de Sistemas'),
+  solicitudPendiente(42, 'Mateo Arango', 'DOCENTE', 'Ingeniería de Sistemas'),
+]
+
+let solicitudes = []
+
+export const solicitudesPendientes = () => solicitudes
+
+export const ID_SOLICITUD = { sofia: uuid(41), mateo: uuid(42) }
+
+const APROBADORES = [
+  'RECTOR',
+  'COORDINADOR_ACADEMICO',
+  'COORDINADOR_FACULTAD',
+  'COORDINADOR_PROGRAMA',
+]
+
+function atenderSolicitudes(metodo, ruta, cuerpo) {
+  if (!APROBADORES.includes(usuarioActual.rol)) return error(MENSAJES.sinPermisoSolicitudes, 403)
+  if (metodo === 'GET' && ruta === '/api/solicitudes/pendientes') return ok(solicitudes)
+
+  const [, id, accion] = ruta.match(/^\/api\/solicitudes\/([^/]+)\/(aprobacion|rechazo)$/) ?? []
+  if (!solicitudes.some((s) => s.id === id) || metodo !== 'POST') return null
+  if (accion === 'rechazo' && String(cuerpo?.motivo ?? '').trim().length < 10) {
+    return error(MENSAJES.motivoCorto)
+  }
+  solicitudes = solicitudes.filter((s) => s.id !== id)
+  return ok()
+}
+
+function atenderAutoridades(cuerpo) {
+  if (usuarioActual.rol !== 'ADMINISTRADOR') return error(MENSAJES.soloAdministrador, 403)
+  if (cuerpo.rol === 'RECTOR') return error(MENSAJES.rectorExiste)
+  return ok()
+}
+
 function cuentaDe(usuario) {
   if (!usuario.registrado) return null
   const celularVerificado = usuario.estadoCuenta === 'ACTIVA'
@@ -147,8 +222,8 @@ function cuentaDe(usuario) {
     mensajeEstado: usuario.mensajeEstado,
     rol: usuario.rol,
     rolSolicitado: usuario.rol || 'ESTUDIANTE',
-    estadoSolicitud: aprobada ? 'APROBADA' : 'PENDIENTE',
-    motivoRechazo: '',
+    estadoSolicitud: estadoSolicitudDe(usuario, aprobada),
+    motivoRechazo: usuario.solicitudRechazada ? MOTIVO_RECHAZO_PREVIO : '',
     ultimoCodigoEnviado: celularVerificado ? '' : avisoCodigo(codigoPendiente),
   }
 }
@@ -206,6 +281,14 @@ function atenderIdentidad(metodo, ruta, cuerpo) {
   const peticion = `${metodo} ${ruta}`
   if (peticion === 'GET /api/registros/opciones') return ok([OPCIONES_REGISTRO])
   if (peticion === 'POST /api/registros') return registrar(cuerpo)
+  if (peticion === 'POST /api/registros/nueva-solicitud') {
+    Object.assign(cuenta, {
+      rolSolicitado: cuerpo.rolSolicitado,
+      estadoSolicitud: 'PENDIENTE',
+      motivoRechazo: '',
+    })
+    return ok()
+  }
   if (!cuenta) return error('Aún no tienes una cuenta en UCO Kudos con este correo.', 403)
 
   switch (peticion) {
@@ -303,6 +386,11 @@ function atender(metodo, ruta, cuerpo) {
     const respuesta = atenderCategorias(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
   }
+  if (ruta.startsWith('/api/solicitudes')) {
+    const respuesta = atenderSolicitudes(metodo, ruta, cuerpo)
+    if (respuesta) return respuesta
+  }
+  if (metodo === 'POST' && ruta === '/api/autoridades') return atenderAutoridades(cuerpo)
   if (/^\/api\/(registros|cuenta|verificaciones)/.test(ruta)) {
     const respuesta = atenderIdentidad(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
@@ -315,6 +403,7 @@ export function iniciarServidorFalso({ conSesion = true, usuario = USUARIO_ACTIV
   usuarioActual = usuario
   codigoPendiente = '123456'
   cuenta = cuentaDe(usuario)
+  solicitudes = SOLICITUDES_INICIALES.map((s) => ({ ...s }))
   categorias = CATEGORIAS_INICIALES.map((c) => ({ ...c }))
   peticiones.length = 0
 

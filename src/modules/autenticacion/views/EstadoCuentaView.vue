@@ -4,16 +4,23 @@ import { useRouter } from 'vue-router'
 import AppIcon from '@/components/icons/AppIcon.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import EstadoValidaciones from '@/modules/identidad/components/EstadoValidaciones.vue'
+import NuevaSolicitudForm from '@/modules/identidad/components/NuevaSolicitudForm.vue'
 import VerificacionCelular from '@/modules/identidad/components/VerificacionCelular.vue'
 import { useCuentaStore } from '@/modules/identidad/stores/cuentaStore'
 import { RUTA_INICIO } from '@/router/inicio'
 import { useSesionStore } from '@/stores/sesionStore'
-import { ESTADO_CUENTA, nombreEstadoCuenta } from '@/shared/domain/cuenta'
+import { ESTADO_CUENTA, ESTADO_SOLICITUD, nombreEstadoCuenta } from '@/shared/domain/cuenta'
+
+const MENSAJE_RECHAZO =
+  'Tu solicitud fue rechazada. Revisa el motivo y, si quieres, envía una nueva solicitud.'
+const MENSAJE_NUEVA_SOLICITUD =
+  'Tu nueva solicitud quedó enviada a la autoridad que te corresponde.'
 
 const sesion = useSesionStore()
 const cuentaStore = useCuentaStore()
 const router = useRouter()
 const saliendo = ref(false)
+const aviso = ref('')
 
 const ESTADOS_SIN_VERIFICACION = [ESTADO_CUENTA.SUSPENDIDA, ESTADO_CUENTA.DESACTIVADA]
 
@@ -27,6 +34,17 @@ const puedeVerificarCelular = computed(
     !cuentaStore.cuenta.celularVerificado &&
     !ESTADOS_SIN_VERIFICACION.includes(cuentaStore.cuenta.estadoCuenta),
 )
+const solicitudRechazada = computed(
+  () => cuentaStore.cuenta?.estadoSolicitud === ESTADO_SOLICITUD.RECHAZADA,
+)
+const mensaje = computed(() =>
+  solicitudRechazada.value ? MENSAJE_RECHAZO : sesion.usuario?.mensajeEstado,
+)
+
+async function nuevaSolicitudEnviada() {
+  await cuentaStore.recargar()
+  aviso.value = MENSAJE_NUEVA_SOLICITUD
+}
 
 onMounted(() => {
   if (sesion.registrado) cuentaStore.cargar()
@@ -60,10 +78,11 @@ async function cerrarSesion() {
       <p v-if="estado" class="estado__dato">
         Estado de la cuenta: <strong>{{ estado }}</strong>
       </p>
-      <p class="estado__mensaje" role="status">{{ sesion.usuario?.mensajeEstado }}</p>
+      <p class="estado__mensaje" role="status">{{ aviso || mensaje }}</p>
 
       <EstadoValidaciones v-if="cuentaStore.cuenta" :cuenta="cuentaStore.cuenta" />
       <p v-if="cuentaStore.error" class="estado__error" role="alert">{{ cuentaStore.error }}</p>
+      <NuevaSolicitudForm v-if="solicitudRechazada" @enviada="nuevaSolicitudEnviada" />
       <VerificacionCelular v-if="puedeVerificarCelular" @verificado="celularVerificado" />
 
       <BaseButton variant="outline" class="estado__salir" :loading="saliendo" @click="cerrarSesion">
