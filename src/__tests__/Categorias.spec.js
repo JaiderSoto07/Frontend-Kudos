@@ -65,7 +65,15 @@ describe('Categorías: acceso por rol', () => {
   it('un gestor ve la opción en el menú y la lista con activas e inactivas', async () => {
     const { wrapper } = await montarCategorias()
     const menu = wrapper.findAll('.sidebar nav li').map((li) => li.text())
-    expect(menu).toEqual(['Inicio', 'Registrar autoridad', 'Categorías', 'Mi cuenta'])
+    expect(menu).toEqual([
+      'Inicio',
+      'Registrar autoridad',
+      'Categorías',
+      'Estructura',
+      'Facultades',
+      'Programas',
+      'Mi cuenta',
+    ])
     expect(wrapper.text()).toContain('Liderazgo')
     expect(wrapper.text()).toContain('Servicio a la comunidad')
     expect(wrapper.text()).toContain('3 categorías · 2 activas')
@@ -78,7 +86,7 @@ describe('Categorías: acceso por rol', () => {
     const { wrapper, router } = await montarApp('/categorias')
     expect(router.currentRoute.value.name).toBe('inicio')
     const menu = wrapper.findAll('.sidebar nav li').map((li) => li.text())
-    expect(menu).toEqual(['Inicio', 'Mi cuenta'])
+    expect(menu).toEqual(['Inicio', 'Estructura', 'Mi cuenta'])
     expect(peticiones.some((p) => p.ruta === '/api/categorias/todas')).toBe(false)
     wrapper.unmount()
   })

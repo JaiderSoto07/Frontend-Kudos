@@ -28,6 +28,8 @@ export const desdeDto = {
     id: idDe(dto),
     nombre: dto.nombre ?? '',
     estado: dto.estado ?? '',
+    cantidadProgramas: dto.cantidadProgramas ?? 0,
+    nombreCoordinador: dto.nombreCoordinador ?? '',
   }),
 
   programa: (dto) => ({
@@ -35,6 +37,33 @@ export const desdeDto = {
     nombre: dto.nombre ?? '',
     idFacultad: idValido(dto.idFacultad),
     nombreFacultad: dto.nombreFacultad ?? '',
+    activo: dto.activo !== false,
+    nombreCoordinador: dto.nombreCoordinador ?? '',
+  }),
+
+  cargo: (dto) => ({
+    idUsuario: idValido(dto.idUsuario),
+    nombrePersona: dto.nombrePersona ?? '',
+    correo: dto.correo ?? '',
+    rol: dto.rol ?? '',
+    nombreFacultad: dto.nombreFacultad ?? '',
+    nombrePrograma: dto.nombrePrograma ?? '',
+    fechaInicio: dto.fechaInicio ?? '',
+    fechaFin: dto.fechaFin ?? '',
+    motivoFin: dto.motivoFin ?? '',
+    vigente: dto.vigente === true,
+  }),
+
+  vinculo: (dto) => ({
+    id: idDe(dto),
+    nombrePersona: dto.nombrePersona ?? '',
+    correo: dto.correo ?? '',
+    tipoVinculo: dto.tipoVinculo ?? '',
+    nombrePrograma: dto.nombrePrograma ?? '',
+    fechaInicio: dto.fechaInicio ?? '',
+    fechaFin: dto.fechaFin ?? '',
+    motivoDesvinculacion: dto.motivoDesvinculacion ?? '',
+    vigente: dto.vigente === true,
   }),
 
   opcionesRegistro: (dto) => ({
@@ -104,6 +133,15 @@ export const haciaDto = {
   codigo: (codigo) => ({ codigo: texto(codigo) }),
 
   rechazo: (motivo) => ({ motivo: texto(motivo) }),
+
+  facultad: (datos) => ({ nombre: texto(datos.nombre) }),
+
+  programa: (datos) => ({ nombre: texto(datos.nombre), idFacultad: datos.idFacultad || null }),
+
+  vinculo: (datos) => ({
+    correo: texto(datos.correo).toLowerCase(),
+    tipoVinculo: datos.tipoVinculo,
+  }),
 
   autoridad: (datos) => ({
     rol: datos.rol,

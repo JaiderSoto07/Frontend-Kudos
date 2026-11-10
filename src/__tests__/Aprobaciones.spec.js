@@ -65,7 +65,14 @@ describe('Solicitudes de cuenta (CU-022 a CU-025)', () => {
     const { wrapper } = await montarApp('/solicitudes')
     await esperar(() => wrapper.text().includes('Sofía Henao'))
 
-    expect(menu(wrapper)).toEqual(['Inicio', 'Solicitudes', 'Mi cuenta'])
+    expect(menu(wrapper)).toEqual([
+      'Inicio',
+      'Solicitudes',
+      'Estructura',
+      'Facultades',
+      'Programas',
+      'Mi cuenta',
+    ])
     expect(wrapper.text()).toContain('Mateo Arango')
     expect(wrapper.text()).toContain('Estudiante')
     expect(wrapper.text()).toContain('Ingeniería de Sistemas')

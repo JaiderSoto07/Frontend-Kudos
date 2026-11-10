@@ -1,11 +1,13 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { RUTA_ESTADO_CUENTA } from '@/router/inicio'
-import { nombreRol } from '@/shared/domain/cuenta'
+import { TIPO_VINCULO, nombreRol } from '@/shared/domain/cuenta'
+import { organizacionService } from '@/modules/organizacion/services/organizacionService'
+import { formatFecha } from '@/modules/organizacion/utils/organizacionValidations'
 import { useSesionStore } from '@/stores/sesionStore'
 import CambiarCelularForm from '../components/CambiarCelularForm.vue'
 import EstadoValidaciones from '../components/EstadoValidaciones.vue'
@@ -31,8 +33,13 @@ const errorCorreo = ref('')
 const errorServidorCorreo = ref('')
 const guardandoCorreo = ref(false)
 
+const misVinculos = ref([])
+const tieneProgramas = computed(() => Object.values(TIPO_VINCULO).includes(store.cuenta?.rol))
+
 onMounted(async () => {
   await store.cargar()
+  if (tieneProgramas.value)
+    misVinculos.value = await organizacionService.misVinculos().catch(() => [])
   datos.nombres = store.cuenta?.nombres ?? ''
   datos.apellidos = store.cuenta?.apellidos ?? ''
 })
@@ -97,6 +104,21 @@ async function cambiarCorreo() {
           <dd>{{ store.cuenta.correo }}</dd>
         </dl>
         <EstadoValidaciones :cuenta="store.cuenta" />
+      </BaseCard>
+
+      <BaseCard v-if="tieneProgramas" class="perfil__programas">
+        <h2 class="perfil__titulo">Mis Programas</h2>
+        <ul class="perfil__lista">
+          <li v-for="vinculo in misVinculos" :key="vinculo.id">
+            <strong>{{ vinculo.nombrePrograma }}</strong> · {{ nombreRol(vinculo.tipoVinculo) }} ·
+            {{
+              vinculo.vigente
+                ? `desde ${formatFecha(vinculo.fechaInicio)}`
+                : `hasta ${formatFecha(vinculo.fechaFin)}`
+            }}
+          </li>
+          <li v-if="!misVinculos.length">Aún no tienes Programas vinculados.</li>
+        </ul>
       </BaseCard>
 
       <BaseCard>
@@ -217,6 +239,13 @@ async function cambiarCorreo() {
   margin-bottom: var(--space-3);
   font-size: var(--text-sm);
   color: var(--color-label);
+}
+
+.perfil__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-4);
 }
 
 .perfil__mensaje {

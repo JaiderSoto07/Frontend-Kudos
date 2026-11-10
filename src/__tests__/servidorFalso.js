@@ -67,6 +67,29 @@ export const USUARIO_COORDINADOR = {
   rol: 'COORDINADOR_PROGRAMA',
 }
 
+export const USUARIO_ACADEMICO = {
+  ...USUARIO_ACTIVO,
+  nombres: 'Carlos',
+  apellidos: 'Restrepo',
+  correoInstitucional: 'crestrepo@gmail.com',
+  rol: 'COORDINADOR_ACADEMICO',
+}
+
+export const USUARIO_ESTUDIANTE = {
+  ...USUARIO_ACTIVO,
+  nombres: 'Sofía',
+  apellidos: 'Henao',
+  correoInstitucional: 'sofia@gmail.com',
+  rol: 'ESTUDIANTE',
+}
+
+export const ID_ORGANIZACION = {
+  ingenieria: uuid(51),
+  derecho: uuid(52),
+  sistemas: uuid(61),
+  vinculoMateo: uuid(71),
+}
+
 export const MOTIVO_RECHAZO_PREVIO = 'No perteneces al Programa que elegiste.'
 
 export const OPCIONES_REGISTRO = {
@@ -90,6 +113,11 @@ export const OPCIONES_REGISTRO = {
 }
 
 export const MENSAJES = {
+  facultadRepetida: 'Ya existe una Facultad con ese nombre. Por favor elige otro.',
+  facultadConProgramas:
+    'No es posible inactivar la Facultad porque tiene Programas activos. Primero inactiva sus Programas.',
+  rolNoCoincide:
+    'El rol vigente de esa persona no corresponde al tipo de vínculo elegido. Un Docente solo se vincula como Docente y un Estudiante como Estudiante.',
   motivoCorto: 'El motivo del rechazo debe tener entre 10 y 250 caracteres.',
   rectorExiste: 'Ya hay un Rector vigente. Solo puede haber uno a la vez.',
   sinPermisoSolicitudes:
@@ -174,6 +202,216 @@ const SOLICITUDES_INICIALES = [
 ]
 
 let solicitudes = []
+let facultades = []
+let programas = []
+let vinculos = []
+
+export const organizacionGuardada = () => ({ facultades, programas, vinculos })
+
+const FACULTADES_INICIALES = [
+  {
+    id: ID_ORGANIZACION.ingenieria,
+    nombre: 'Ingeniería',
+    estado: 'ACTIVA',
+    cantidadProgramas: 1,
+    nombreCoordinador: 'Luisa Ospina',
+  },
+  {
+    id: ID_ORGANIZACION.derecho,
+    nombre: 'Derecho',
+    estado: 'EN_CONFORMACION',
+    cantidadProgramas: 0,
+    nombreCoordinador: '',
+  },
+]
+
+const PROGRAMAS_INICIALES = [
+  {
+    id: ID_ORGANIZACION.sistemas,
+    nombre: 'Ingeniería de Sistemas',
+    idFacultad: ID_ORGANIZACION.ingenieria,
+    nombreFacultad: 'Ingeniería',
+    activo: true,
+    nombreCoordinador: 'Juan Pablo Zuluaga',
+  },
+]
+
+const vinculo = (id, nombre, correo, tipo, vigente = true) => ({
+  id,
+  idUsuario: uuid(80),
+  nombrePersona: nombre,
+  correo,
+  tipoVinculo: tipo,
+  idPrograma: ID_ORGANIZACION.sistemas,
+  nombrePrograma: 'Ingeniería de Sistemas',
+  fechaInicio: '2026-02-01T08:00:00',
+  fechaFin: vigente ? '1000-01-01T00:00:00' : '2026-06-30T08:00:00',
+  motivoDesvinculacion: vigente ? '' : 'Terminó el semestre.',
+  vigente,
+})
+
+const VINCULOS_INICIALES = [
+  vinculo(ID_ORGANIZACION.vinculoMateo, 'Mateo Cardona', 'mateo@gmail.com', 'DOCENTE'),
+  vinculo(uuid(72), 'Laura Gil', 'laura@gmail.com', 'ESTUDIANTE', false),
+]
+
+const cargo = (rol, nombre, extra = {}) => ({
+  idUsuario: uuid(90),
+  nombrePersona: nombre,
+  correo: '',
+  rol,
+  nombreFacultad: '',
+  nombrePrograma: '',
+  fechaInicio: '2026-01-15T08:00:00',
+  fechaFin: '1000-01-01T00:00:00',
+  motivoFin: '',
+  vigente: true,
+  ...extra,
+})
+
+const ESTRUCTURA = [
+  cargo('RECTOR', 'María Fernanda Gómez'),
+  cargo('COORDINADOR_ACADEMICO', 'Carlos Restrepo'),
+  cargo('COORDINADOR_FACULTAD', 'Luisa Ospina', { nombreFacultad: 'Ingeniería' }),
+  cargo('COORDINADOR_PROGRAMA', 'Juan Pablo Zuluaga', { nombrePrograma: 'Ingeniería de Sistemas' }),
+]
+
+const CONSULTAN_ORGANIZACION = [
+  'ADMINISTRADOR',
+  'RECTOR',
+  'COORDINADOR_ACADEMICO',
+  'COORDINADOR_FACULTAD',
+  'COORDINADOR_PROGRAMA',
+]
+
+function registrarFacultad(cuerpo) {
+  if (facultades.some((f) => f.nombre.toLowerCase() === cuerpo.nombre.toLowerCase())) {
+    return error(MENSAJES.facultadRepetida)
+  }
+  facultades.push({
+    id: uuid(53),
+    nombre: cuerpo.nombre,
+    estado: 'EN_CONFORMACION',
+    cantidadProgramas: 0,
+    nombreCoordinador: '',
+  })
+  return ok()
+}
+
+function atenderFacultades(metodo, ruta, cuerpo) {
+  if (metodo === 'GET' && ruta === '/api/facultades') return ok(facultades)
+  if (metodo === 'POST' && ruta === '/api/facultades') return registrarFacultad(cuerpo)
+  const [, id, accion] =
+    ruta.match(/^\/api\/facultades\/([^/]+)(?:\/(inactivacion|coordinadores))?$/) ?? []
+  const facultad = facultades.find((f) => f.id === id)
+  if (!facultad) return null
+  if (metodo === 'GET' && accion === 'coordinadores') {
+    return ok([cargo('COORDINADOR_FACULTAD', facultad.nombreCoordinador || 'Luisa Ospina')])
+  }
+  if (metodo === 'POST' && accion === 'inactivacion') {
+    if (facultad.cantidadProgramas > 0) return error(MENSAJES.facultadConProgramas)
+    facultad.estado = 'INACTIVA'
+    return ok()
+  }
+  if (metodo === 'PUT' && !accion) {
+    facultad.nombre = cuerpo.nombre
+    return ok()
+  }
+  return null
+}
+
+function registrarPrograma(cuerpo) {
+  const facultad = facultades.find((f) => f.id === cuerpo.idFacultad)
+  programas.push({
+    id: uuid(62),
+    nombre: cuerpo.nombre,
+    idFacultad: cuerpo.idFacultad,
+    nombreFacultad: facultad?.nombre ?? '',
+    activo: true,
+    nombreCoordinador: '',
+  })
+  if (facultad) {
+    Object.assign(facultad, { estado: 'ACTIVA', cantidadProgramas: facultad.cantidadProgramas + 1 })
+  }
+  return ok()
+}
+
+function vincularPersona(programa, cuerpo) {
+  if (cuerpo.correo === 'mateo@gmail.com' && cuerpo.tipoVinculo === 'ESTUDIANTE') {
+    return error(MENSAJES.rolNoCoincide)
+  }
+  vinculos.push({
+    ...vinculo(uuid(73), 'Sofía Henao', cuerpo.correo, cuerpo.tipoVinculo),
+    idPrograma: programa.id,
+  })
+  return ok()
+}
+
+const HISTORIAL_PROGRAMA = [
+  cargo('COORDINADOR_PROGRAMA', 'Juan Pablo Zuluaga'),
+  cargo('COORDINADOR_PROGRAMA', 'Ana Ruiz', {
+    vigente: false,
+    fechaFin: '2025-12-01T08:00:00',
+    motivoFin: 'Terminó su periodo.',
+  }),
+]
+
+function atenderPrograma(metodo, accion, programa, cuerpo) {
+  switch (`${metodo} ${accion ?? ''}`) {
+    case 'GET ':
+      return ok([programa])
+    case 'GET coordinadores':
+      return ok(HISTORIAL_PROGRAMA)
+    case 'GET vinculos':
+      return ok(vinculos.filter((v) => v.idPrograma === programa.id))
+    case 'POST vinculos':
+      return vincularPersona(programa, cuerpo)
+    case 'POST inactivacion':
+      programa.activo = false
+      return ok()
+    case 'PUT ':
+      programa.nombre = cuerpo.nombre
+      return ok()
+    default:
+      return null
+  }
+}
+
+function atenderProgramas(metodo, ruta, cuerpo) {
+  if (metodo === 'GET' && ruta === '/api/programas') return ok(programas)
+  if (metodo === 'POST' && ruta === '/api/programas') return registrarPrograma(cuerpo)
+  const [, id, accion] =
+    ruta.match(/^\/api\/programas\/([^/]+)(?:\/(inactivacion|coordinadores|vinculos))?$/) ?? []
+  const programa = programas.find((p) => p.id === id)
+  return programa ? atenderPrograma(metodo, accion, programa, cuerpo) : null
+}
+
+function desvincular(idVinculo, cuerpo) {
+  const encontrado = vinculos.find((v) => v.id === idVinculo)
+  if (!encontrado) return null
+  Object.assign(encontrado, {
+    vigente: false,
+    fechaFin: '2026-11-10T11:00:00',
+    motivoDesvinculacion: cuerpo.motivo,
+  })
+  return ok()
+}
+
+function misVinculos() {
+  if (usuarioActual.rol !== 'ESTUDIANTE') return ok([])
+  return ok([vinculo(uuid(74), usuarioActual.nombres, '', 'ESTUDIANTE')])
+}
+
+function atenderOrganizacion(metodo, ruta, cuerpo) {
+  if (ruta === '/api/estructura') return ok(ESTRUCTURA)
+  if (ruta === '/api/cuenta/vinculos') return misVinculos()
+  if (!CONSULTAN_ORGANIZACION.includes(usuarioActual.rol)) return error('No tienes permiso.', 403)
+  const desvinculacion = ruta.match(/^\/api\/vinculos\/([^/]+)\/desvinculacion$/)
+  if (metodo === 'POST' && desvinculacion) return desvincular(desvinculacion[1], cuerpo)
+  if (ruta.startsWith('/api/facultades')) return atenderFacultades(metodo, ruta, cuerpo)
+  if (ruta.startsWith('/api/programas')) return atenderProgramas(metodo, ruta, cuerpo)
+  return null
+}
 
 export const solicitudesPendientes = () => solicitudes
 
@@ -386,6 +624,10 @@ function atender(metodo, ruta, cuerpo) {
     const respuesta = atenderCategorias(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
   }
+  if (/^\/api\/(facultades|programas|vinculos|estructura|cuenta\/vinculos)/.test(ruta)) {
+    const respuesta = atenderOrganizacion(metodo, ruta, cuerpo)
+    if (respuesta) return respuesta
+  }
   if (ruta.startsWith('/api/solicitudes')) {
     const respuesta = atenderSolicitudes(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
@@ -404,6 +646,9 @@ export function iniciarServidorFalso({ conSesion = true, usuario = USUARIO_ACTIV
   codigoPendiente = '123456'
   cuenta = cuentaDe(usuario)
   solicitudes = SOLICITUDES_INICIALES.map((s) => ({ ...s }))
+  facultades = FACULTADES_INICIALES.map((f) => ({ ...f }))
+  programas = PROGRAMAS_INICIALES.map((p) => ({ ...p }))
+  vinculos = VINCULOS_INICIALES.map((v) => ({ ...v }))
   categorias = CATEGORIAS_INICIALES.map((c) => ({ ...c }))
   peticiones.length = 0
 

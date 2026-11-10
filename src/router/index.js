@@ -4,6 +4,7 @@ import { alSesionVencida } from '@/api/http'
 import { useSesionStore } from '@/stores/sesionStore'
 import {
   ROLES_APROBADORES,
+  ROLES_CONSULTAN_ORGANIZACION,
   ROLES_GESTORES_CATEGORIAS,
   ROLES_QUE_REGISTRAN_AUTORIDADES,
 } from '@/shared/domain/cuenta'
@@ -56,6 +57,31 @@ export const routes = [
         name: 'autoridades',
         component: () => import('@/modules/autoridades/views/RegistrarAutoridadView.vue'),
         meta: { title: 'Registrar autoridad', roles: ROLES_QUE_REGISTRAN_AUTORIDADES },
+      },
+      {
+        path: 'estructura',
+        name: 'estructura',
+        component: () => import('@/modules/organizacion/views/EstructuraView.vue'),
+        meta: { title: 'Estructura' },
+      },
+      {
+        path: 'facultades',
+        name: 'facultades',
+        component: () => import('@/modules/organizacion/views/FacultadesView.vue'),
+        meta: { title: 'Facultades', roles: ROLES_CONSULTAN_ORGANIZACION },
+      },
+      {
+        path: 'programas',
+        name: 'programas',
+        component: () => import('@/modules/organizacion/views/ProgramasView.vue'),
+        meta: { title: 'Programas', roles: ROLES_CONSULTAN_ORGANIZACION },
+      },
+      {
+        path: 'programas/:id',
+        name: 'programa-detalle',
+        component: () => import('@/modules/organizacion/views/ProgramaDetalleView.vue'),
+        props: true,
+        meta: { title: 'Programa', roles: ROLES_CONSULTAN_ORGANIZACION },
       },
       {
         path: 'mi-cuenta',
