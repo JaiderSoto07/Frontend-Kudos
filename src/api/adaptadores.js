@@ -13,6 +13,21 @@ export const desdeDto = {
     registrado: dto.registrado === true,
     mensajeEstado: dto.mensajeEstado ?? '',
   }),
+
+  categoria: (dto) => ({
+    id: idDe(dto),
+    nombre: dto.nombre ?? '',
+    descripcion: dto.descripcion ?? '',
+    activa: dto.activa === true,
+    fechaCreacion: dto.fechaCreacion ?? '',
+  }),
 }
 
 export const listaDesdeDto = (adaptador) => (lista) => (lista ?? []).map(adaptador)
+
+export const haciaDto = {
+  categoria: (datos) => ({
+    nombre: datos.nombre.trim(),
+    descripcion: datos.descripcion.trim(),
+  }),
+}

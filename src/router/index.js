@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
 import { alSesionVencida } from '@/api/http'
 import { useSesionStore } from '@/stores/sesionStore'
+import { ROLES_GESTORES_CATEGORIAS } from '@/shared/domain/cuenta'
 import { RUTA_ESTADO_CUENTA, RUTA_INICIO } from './inicio'
 
 export const routes = [
@@ -27,6 +28,12 @@ export const routes = [
         name: 'inicio',
         component: () => import('@/modules/inicio/views/InicioView.vue'),
         meta: { title: 'Inicio' },
+      },
+      {
+        path: 'categorias',
+        name: 'categorias',
+        component: () => import('@/modules/categorias/views/CategoriasView.vue'),
+        meta: { title: 'Categorías', roles: ROLES_GESTORES_CATEGORIAS },
       },
     ],
   },

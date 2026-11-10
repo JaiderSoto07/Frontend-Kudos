@@ -34,6 +34,8 @@ const NOMBRES_ESTADO = {
   [ESTADO_CUENTA.DESACTIVADA]: 'Desactivada',
 }
 
+export const ROLES_GESTORES_CATEGORIAS = [ROL.ADMINISTRADOR, ROL.RECTOR, ROL.COORDINADOR_ACADEMICO]
+
 export const nombreRol = (rol) => NOMBRES_ROL[rol] ?? ''
 
 export const nombreEstadoCuenta = (estado) => NOMBRES_ESTADO[estado] ?? ''
