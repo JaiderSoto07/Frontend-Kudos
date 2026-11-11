@@ -1,19 +1,6 @@
-import { ApiError, http } from '@/api/http'
+import { http } from '@/api/http'
+import { consulta, primero } from '@/api/consultas'
 import { desdeDto, haciaDto, listaDesdeDto } from '@/api/adaptadores'
-
-const primero = (mensaje) => (datos) => {
-  if (!datos.length) throw new ApiError(mensaje)
-  return datos[0]
-}
-
-function consulta(parametros) {
-  const busqueda = new URLSearchParams()
-  for (const [clave, valor] of Object.entries(parametros)) {
-    if (valor) busqueda.set(clave, valor)
-  }
-  const texto = busqueda.toString()
-  return texto ? `?${texto}` : ''
-}
 
 export const kudoService = {
   muro: ({ categoria = '', persona = '', pagina = 1 } = {}) =>

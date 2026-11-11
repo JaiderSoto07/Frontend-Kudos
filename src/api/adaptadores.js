@@ -166,6 +166,37 @@ export const desdeDto = {
     cantidadReportes: dto.cantidadReportes ?? 0,
   }),
 
+  auditoria: (dto) => ({
+    id: idDe(dto),
+    fechaHora: dto.fechaHora ?? '',
+    idActor: idValido(dto.idActor),
+    nombreActor: dto.nombreActor ?? '',
+    accion: dto.accion ?? '',
+    tipoObjeto: dto.tipoObjeto ?? '',
+    idObjeto: idValido(dto.idObjeto),
+    estadoAnterior: dto.estadoAnterior ?? '',
+    estadoNuevo: dto.estadoNuevo ?? '',
+    motivo: dto.motivo ?? '',
+    detalle: dto.detalle ?? '',
+  }),
+
+  paginaAuditoria: (dto) => ({
+    registros: (dto.registros ?? []).map(desdeDto.auditoria),
+    pagina: dto.pagina ?? 1,
+    totalPaginas: dto.totalPaginas ?? 0,
+    totalRegistros: dto.totalRegistros ?? 0,
+  }),
+
+  notificacion: (dto) => ({
+    id: idDe(dto),
+    tipo: dto.tipo ?? '',
+    mensaje: dto.mensaje ?? '',
+    tipoReferencia: dto.tipoReferencia ?? '',
+    idReferencia: idValido(dto.idReferencia),
+    fechaCreacion: dto.fechaCreacion ?? '',
+    leida: dto.leida === true,
+  }),
+
   persona: (dto) => ({
     id: idDe(dto),
     nombre: dto.nombre ?? '',

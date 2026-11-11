@@ -1,10 +1,6 @@
-import { ApiError, http } from '@/api/http'
+import { http } from '@/api/http'
+import { primero } from '@/api/consultas'
 import { desdeDto, haciaDto, listaDesdeDto } from '@/api/adaptadores'
-
-const primero = (mensaje) => (datos) => {
-  if (!datos.length) throw new ApiError(mensaje)
-  return datos[0]
-}
 
 export const conversacionService = {
   conversacion: (idKudo) =>

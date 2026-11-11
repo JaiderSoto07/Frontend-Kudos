@@ -71,6 +71,7 @@ describe('Categorías: acceso por rol', () => {
       'Mis reportes',
       'Registrar autoridad',
       'Categorías',
+      'Auditoría',
       'Estructura',
       'Facultades',
       'Programas',

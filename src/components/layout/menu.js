@@ -1,5 +1,6 @@
 import {
   ROLES_APROBADORES,
+  ROLES_CONSULTAN_AUDITORIA,
   ROLES_CONSULTAN_ORGANIZACION,
   ROLES_GESTORES_CATEGORIAS,
   ROLES_MODERADORES,
@@ -22,6 +23,7 @@ export const GRUPOS_MENU = [
     },
     { label: 'Categorías', icon: 'tag', to: '/categorias', roles: ROLES_GESTORES_CATEGORIAS },
     { label: 'Moderación', icon: 'flag', to: '/moderacion', roles: ROLES_MODERADORES },
+    { label: 'Auditoría', icon: 'list', to: '/auditoria', roles: ROLES_CONSULTAN_AUDITORIA },
   ],
   [
     { label: 'Estructura', icon: 'building', to: '/estructura' },

@@ -1058,6 +1058,153 @@ function reportesIniciales() {
   nuevoReporte('REPLICA', replica, PERSONAS[0].id, PERSONAS[0].nombre, 'OTRO', 'Se burla de Luis.')
 }
 
+export const notificacionesGuardadas = () => notificaciones
+
+export const ID_NOTIFICACION = { kudo: uuid(601), solicitud: uuid(602), vetado: uuid(603) }
+
+const ROLES_AUDITORIA = [
+  'ADMINISTRADOR',
+  'RECTOR',
+  'COORDINADOR_ACADEMICO',
+  'COORDINADOR_FACULTAD',
+  'COORDINADOR_PROGRAMA',
+]
+const REGISTROS_POR_PAGINA = 20
+
+let notificaciones = []
+let auditoria = []
+
+const notificacionesIniciales = () => [
+  {
+    id: ID_NOTIFICACION.vetado,
+    tipo: 'CONTENIDO_VETADO',
+    mensaje: 'Tu réplica fue vetada por moderación. Motivo: lenguaje ofensivo',
+    tipoReferencia: 'Kudo',
+    idReferencia: ID_KUDO.primero,
+    fechaCreacion: '2026-11-08T10:00:00',
+    leida: true,
+  },
+  {
+    id: ID_NOTIFICACION.kudo,
+    tipo: 'KUDO_RECIBIDO',
+    mensaje: 'Marta Ruiz te dio un Kudo en la categoría Liderazgo.',
+    tipoReferencia: 'Kudo',
+    idReferencia: ID_KUDO.segundo,
+    fechaCreacion: '2026-11-10T09:00:00',
+    leida: false,
+  },
+  {
+    id: ID_NOTIFICACION.solicitud,
+    tipo: 'SOLICITUD_PENDIENTE',
+    mensaje: 'Sofía Henao solicitó una cuenta de Estudiante.',
+    tipoReferencia: 'SolicitudRegistro',
+    idReferencia: uuid(41),
+    fechaCreacion: '2026-11-09T09:00:00',
+    leida: false,
+  },
+]
+
+function auditoriaInicial() {
+  const registros = [
+    {
+      accion: 'KudoVetado',
+      tipoObjeto: 'Kudo',
+      nombreActor: 'María Gómez',
+      estadoAnterior: 'EN_REVISION',
+      estadoNuevo: 'VETADO',
+      motivo: 'Contiene burlas',
+      fechaHora: '2026-11-10T12:00:00',
+    },
+    {
+      accion: 'SolicitudAprobada',
+      tipoObjeto: 'SolicitudRegistro',
+      nombreActor: 'Andrés Restrepo',
+      estadoAnterior: 'PENDIENTE',
+      estadoNuevo: 'APROBADA',
+      motivo: '',
+      fechaHora: '2026-10-01T08:00:00',
+    },
+  ]
+  for (let i = 0; i < 23; i += 1) {
+    registros.push({
+      accion: 'KudoPublicado',
+      tipoObjeto: 'Kudo',
+      nombreActor: 'Luis Gómez',
+      estadoAnterior: 'CREADO',
+      estadoNuevo: 'VISIBLE',
+      motivo: '',
+      fechaHora: '2026-11-09T09:00:00',
+    })
+  }
+  return registros.map((registro, i) => ({
+    id: uuid(700 + i),
+    idObjeto: uuid(750 + i),
+    ...registro,
+  }))
+}
+
+const sinTildes = (valor) =>
+  String(valor ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replaceAll(/\p{M}/gu, '')
+    .trim()
+
+function consultarAuditoria(parametros) {
+  if (!ROLES_AUDITORIA.includes(usuarioActual.rol)) {
+    return error('Solo las autoridades pueden consultar la auditoría.', 403)
+  }
+  const desde = parametros.get('desde') ?? ''
+  const hasta = parametros.get('hasta') ?? ''
+  if (desde && hasta && desde > hasta) {
+    return error('La fecha inicial no puede ser posterior a la fecha final.')
+  }
+  const filtrados = auditoria.filter(
+    (r) =>
+      (!parametros.get('accion') || r.accion === parametros.get('accion')) &&
+      (!parametros.get('tipoObjeto') || r.tipoObjeto === parametros.get('tipoObjeto')) &&
+      sinTildes(r.nombreActor).includes(sinTildes(parametros.get('actor'))) &&
+      (!desde || r.fechaHora.slice(0, 10) >= desde) &&
+      (!hasta || r.fechaHora.slice(0, 10) <= hasta),
+  )
+  const totalPaginas = Math.ceil(filtrados.length / REGISTROS_POR_PAGINA)
+  const pagina = Math.min(
+    Math.max(Number(parametros.get('pagina') ?? 1), 1),
+    Math.max(totalPaginas, 1),
+  )
+  const inicio = (pagina - 1) * REGISTROS_POR_PAGINA
+  return ok([
+    {
+      registros: filtrados.slice(inicio, inicio + REGISTROS_POR_PAGINA),
+      pagina,
+      totalPaginas,
+      totalRegistros: filtrados.length,
+    },
+  ])
+}
+
+function atenderNotificaciones(metodo, ruta) {
+  if (metodo === 'GET' && ruta === '/api/notificaciones') {
+    return ok(
+      [...notificaciones].sort((a, b) =>
+        a.leida === b.leida ? b.fechaCreacion.localeCompare(a.fechaCreacion) : a.leida ? 1 : -1,
+      ),
+    )
+  }
+  if (metodo === 'POST' && ruta === '/api/notificaciones/lectura') {
+    for (const notificacion of notificaciones) notificacion.leida = true
+    return ok()
+  }
+  const lectura = ruta.match(/^\/api\/notificaciones\/([^/]+)\/lectura$/)
+  if (metodo === 'POST' && lectura) {
+    const notificacion = notificaciones.find((n) => n.id === lectura[1])
+    if (!notificacion) return error('La notificación indicada no existe.')
+    notificacion.leida = true
+    return ok()
+  }
+  return null
+}
+
 export const peticiones = []
 
 function atender(metodo, url, cuerpo) {
@@ -1072,6 +1219,11 @@ function atender(metodo, url, cuerpo) {
     sesionActiva = false
     return sinCuerpo(200)
   }
+  if (ruta.startsWith('/api/notificaciones')) {
+    const respuesta = atenderNotificaciones(metodo, ruta)
+    if (respuesta) return respuesta
+  }
+  if (metodo === 'GET' && ruta === '/api/auditoria') return consultarAuditoria(parametros)
   if (ruta.startsWith('/api/categorias')) {
     const respuesta = atenderCategorias(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
@@ -1122,6 +1274,8 @@ export function iniciarServidorFalso({
   vetos = []
   siguienteReporte = 500
   if (conReportes) reportesIniciales()
+  notificaciones = notificacionesIniciales()
+  auditoria = auditoriaInicial()
   facultades = FACULTADES_INICIALES.map((f) => ({ ...f }))
   programas = PROGRAMAS_INICIALES.map((p) => ({ ...p }))
   vinculos = VINCULOS_INICIALES.map((v) => ({ ...v }))

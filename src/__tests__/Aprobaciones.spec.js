@@ -70,6 +70,7 @@ describe('Solicitudes de cuenta (CU-022 a CU-025)', () => {
       'Mis Kudos',
       'Mis reportes',
       'Solicitudes',
+      'Auditoría',
       'Estructura',
       'Facultades',
       'Programas',

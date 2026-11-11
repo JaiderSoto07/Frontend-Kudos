@@ -4,6 +4,7 @@ import { alSesionVencida } from '@/api/http'
 import { useSesionStore } from '@/stores/sesionStore'
 import {
   ROLES_APROBADORES,
+  ROLES_CONSULTAN_AUDITORIA,
   ROLES_CONSULTAN_ORGANIZACION,
   ROLES_GESTORES_CATEGORIAS,
   ROLES_MODERADORES,
@@ -90,6 +91,12 @@ export const routes = [
         name: 'moderacion',
         component: () => import('@/modules/moderacion/views/ModeracionView.vue'),
         meta: { title: 'Moderación', roles: ROLES_MODERADORES },
+      },
+      {
+        path: 'auditoria',
+        name: 'auditoria',
+        component: () => import('@/modules/auditoria/views/AuditoriaView.vue'),
+        meta: { title: 'Auditoría', roles: ROLES_CONSULTAN_AUDITORIA },
       },
       {
         path: 'estructura',

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '@/components/icons/AppIcon.vue'
+import CampanaNotificaciones from '@/modules/notificaciones/components/CampanaNotificaciones.vue'
 import { useSesionStore } from '@/stores/sesionStore'
 
 const emit = defineEmits(['toggle-menu'])
@@ -28,6 +29,7 @@ async function cerrarSesion() {
     </button>
 
     <div class="topbar__right">
+      <CampanaNotificaciones v-if="sesion.cuentaActiva" />
       <div v-if="sesion.usuario" class="topbar__user" @keydown.esc="cerrarMenuUsuario">
         <button
           type="button"
