@@ -4,7 +4,6 @@ import AppIcon from '@/components/icons/AppIcon.vue'
 import { conversacionService } from '../services/conversacionService'
 import { conSangria, formatFechaHora, formatPromedio } from '../utils/kudoUtils'
 import CalificacionEstrellas from './CalificacionEstrellas.vue'
-import ReplicaNodo from './ReplicaNodo.vue'
 import ResponderForm from './ResponderForm.vue'
 
 const props = defineProps({
