@@ -1,8 +1,13 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
+import DecisionModal from '@/modules/moderacion/components/DecisionModal.vue'
+import ReportarModal from '@/modules/moderacion/components/ReportarModal.vue'
+import { TIPO_CONTENIDO } from '@/modules/moderacion/utils/moderacionUtils'
+import { ROLES_MODERADORES } from '@/shared/domain/cuenta'
 import { useSesionStore } from '@/stores/sesionStore'
 import CalificacionEstrellas from '../components/CalificacionEstrellas.vue'
 import ConversacionArbol from '../components/ConversacionArbol.vue'
@@ -21,10 +26,32 @@ const valoraciones = ref(null)
 const error = ref('')
 const errorCalificacion = ref('')
 const calificando = ref(false)
+const reportando = ref(null)
+const decision = ref(null)
+const aviso = ref('')
 
 const idUsuario = computed(() => sesion.usuario?.id ?? '')
+const esModerador = computed(() => sesion.tieneRol(ROLES_MODERADORES))
 const abierto = computed(() => kudo.value?.estado !== 'VETADO')
-const puedeCalificar = computed(() => abierto.value && kudo.value?.idAutor !== idUsuario.value)
+const esPropio = computed(() => kudo.value?.idAutor === idUsuario.value)
+const puedeCalificar = computed(() => abierto.value && !esPropio.value)
+
+const contenidoKudo = () => ({
+  tipo: TIPO_CONTENIDO.KUDO,
+  id: props.id,
+  nombreAutor: kudo.value.nombreAutor,
+})
+
+function reportado() {
+  reportando.value = null
+  aviso.value = 'Tu reporte quedó registrado. Un moderador lo revisará.'
+}
+
+async function vetado() {
+  decision.value = null
+  aviso.value = 'El Kudo quedó vetado y se avisó a su autor.'
+  kudo.value = await kudoService.obtener(props.id)
+}
 
 async function cargarValoraciones() {
   valoraciones.value = await conversacionService.valoracionesKudo(props.id)
@@ -76,11 +103,40 @@ onMounted(async () => {
           }}</RouterLink>
         </h1>
         <p class="detalle-kudo__fecha">{{ formatFechaHora(kudo.fechaCreacion) }}</p>
-        <p class="detalle-kudo__contenido">{{ kudo.contenido }}</p>
+        <p v-if="kudo.vetado" class="detalle-kudo__vetado" role="status">
+          Este Kudo fue vetado por moderación. Su conversación se conserva, pero ya no admite
+          réplicas, calificaciones ni reportes.
+        </p>
+        <p
+          class="detalle-kudo__contenido"
+          :class="{ 'detalle-kudo__contenido--vetado': kudo.vetado }"
+        >
+          {{ kudo.contenido }}
+        </p>
         <dl class="detalle-kudo__datos">
           <dt>Visualizaciones</dt>
           <dd>{{ kudo.cantidadVisualizaciones }}</dd>
         </dl>
+        <div v-if="abierto && (!esPropio || esModerador)" class="detalle-kudo__acciones">
+          <BaseButton
+            v-if="!esPropio"
+            variant="outline"
+            icon="flag"
+            class="detalle-kudo__reportar"
+            @click="reportando = contenidoKudo()"
+          >
+            Reportar
+          </BaseButton>
+          <BaseButton
+            v-if="esModerador"
+            danger
+            class="detalle-kudo__vetar"
+            @click="decision = { accion: 'vetar', ...contenidoKudo() }"
+          >
+            Vetar
+          </BaseButton>
+        </div>
+        <p v-if="aviso" class="detalle-kudo__aviso" role="status">{{ aviso }}</p>
       </BaseCard>
 
       <BaseCard v-if="valoraciones" class="detalle-kudo__valoraciones">
@@ -100,8 +156,16 @@ onMounted(async () => {
         </p>
       </BaseCard>
 
-      <ConversacionArbol :id-kudo="id" :id-usuario="idUsuario" :abierta="abierto" />
+      <ConversacionArbol
+        :id-kudo="id"
+        :id-usuario="idUsuario"
+        :abierta="abierto"
+        :moderador="esModerador"
+      />
     </template>
+
+    <ReportarModal :contenido="reportando" @cerrar="reportando = null" @reportado="reportado" />
+    <DecisionModal :decision="decision" @cerrar="decision = null" @decidido="vetado" />
   </section>
 </template>
 
@@ -167,5 +231,29 @@ onMounted(async () => {
 .detalle-kudo__error {
   font-size: var(--text-sm);
   color: var(--color-danger);
+}
+
+.detalle-kudo__vetado {
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.detalle-kudo__contenido--vetado {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.detalle-kudo__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.detalle-kudo__aviso {
+  font-size: var(--text-sm);
+  color: var(--color-success);
 }
 </style>

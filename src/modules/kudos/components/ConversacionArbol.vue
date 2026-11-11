@@ -1,6 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
+import DecisionModal from '@/modules/moderacion/components/DecisionModal.vue'
+import ReportarModal from '@/modules/moderacion/components/ReportarModal.vue'
+import { TIPO_CONTENIDO } from '@/modules/moderacion/utils/moderacionUtils'
 import { conversacionService } from '../services/conversacionService'
 import ReplicaNodo from './ReplicaNodo.vue'
 import ResponderForm from './ResponderForm.vue'
@@ -9,12 +12,21 @@ const props = defineProps({
   idKudo: { type: String, required: true },
   idUsuario: { type: String, default: '' },
   abierta: { type: Boolean, default: true },
+  moderador: { type: Boolean, default: false },
 })
 
 const replicas = ref([])
 const cargando = ref(true)
 const error = ref('')
 const aviso = ref('')
+const reportando = ref(null)
+const decision = ref(null)
+
+const contenidoReplica = (replica) => ({
+  tipo: TIPO_CONTENIDO.REPLICA,
+  id: replica.id,
+  nombreAutor: replica.nombreAutor,
+})
 
 function contar(lista) {
   let total = 0
@@ -40,6 +52,17 @@ const responderKudo = (texto) => conversacionService.responderKudo(props.idKudo,
 async function publicado() {
   await cargar()
   aviso.value = 'Tu réplica quedó publicada en la conversación.'
+}
+
+function reportado() {
+  reportando.value = null
+  aviso.value = 'Tu reporte quedó registrado. Un moderador lo revisará.'
+}
+
+async function vetada() {
+  decision.value = null
+  await cargar()
+  aviso.value = 'La réplica quedó vetada y se avisó a su autor.'
 }
 
 onMounted(cargar)
@@ -73,8 +96,14 @@ onMounted(cargar)
       :replica="replica"
       :id-usuario="idUsuario"
       :abierta="abierta"
+      :moderador="moderador"
       @actualizado="cargar"
+      @reportar="reportando = contenidoReplica($event)"
+      @vetar="decision = { accion: 'vetar', ...contenidoReplica($event) }"
     />
+
+    <ReportarModal :contenido="reportando" @cerrar="reportando = null" @reportado="reportado" />
+    <DecisionModal :decision="decision" @cerrar="decision = null" @decidido="vetada" />
   </BaseCard>
 </template>
 

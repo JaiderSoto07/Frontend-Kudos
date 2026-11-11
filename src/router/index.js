@@ -6,6 +6,7 @@ import {
   ROLES_APROBADORES,
   ROLES_CONSULTAN_ORGANIZACION,
   ROLES_GESTORES_CATEGORIAS,
+  ROLES_MODERADORES,
   ROLES_QUE_REGISTRAN_AUTORIDADES,
 } from '@/shared/domain/cuenta'
 import { RUTA_ESTADO_CUENTA, RUTA_INICIO, RUTA_REGISTRO } from './inicio'
@@ -77,6 +78,18 @@ export const routes = [
         name: 'mis-kudos',
         component: () => import('@/modules/kudos/views/HistorialKudosView.vue'),
         meta: { title: 'Mis Kudos' },
+      },
+      {
+        path: 'mis-reportes',
+        name: 'mis-reportes',
+        component: () => import('@/modules/moderacion/views/MisReportesView.vue'),
+        meta: { title: 'Mis reportes' },
+      },
+      {
+        path: 'moderacion',
+        name: 'moderacion',
+        component: () => import('@/modules/moderacion/views/ModeracionView.vue'),
+        meta: { title: 'Moderación', roles: ROLES_MODERADORES },
       },
       {
         path: 'estructura',

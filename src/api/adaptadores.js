@@ -93,6 +93,7 @@ export const desdeDto = {
     contenido: dto.contenido ?? '',
     fechaCreacion: dto.fechaCreacion ?? '',
     estado: dto.estado ?? '',
+    vetado: dto.vetado === true,
     cantidadVisualizaciones: dto.cantidadVisualizaciones ?? 0,
     promedioCalificacion: Number(dto.promedioCalificacion ?? 0),
     cantidadCalificaciones: dto.cantidadCalificaciones ?? 0,
@@ -124,6 +125,45 @@ export const desdeDto = {
     cantidad: dto.cantidad ?? 0,
     distribucion: dto.distribucion?.length ? dto.distribucion : [0, 0, 0, 0, 0],
     miCalificacion: dto.miCalificacion ?? 0,
+  }),
+
+  reporte: (dto) => ({
+    id: idDe(dto),
+    motivo: dto.motivo ?? '',
+    descripcion: dto.descripcion ?? '',
+    fechaReporte: dto.fechaReporte ?? '',
+    estado: dto.estado ?? '',
+    tipoContenido: dto.tipoContenido ?? '',
+    idContenido: idValido(dto.idContenido),
+    idKudo: idValido(dto.idKudo),
+    contenido: dto.contenido ?? '',
+    nombreAutorContenido: dto.nombreAutorContenido ?? '',
+    nombreReportante: dto.nombreReportante ?? '',
+  }),
+
+  contenidoReportado: (dto) => ({
+    tipoContenido: dto.tipoContenido ?? '',
+    idContenido: idValido(dto.idContenido),
+    idKudo: idValido(dto.idKudo),
+    contenido: dto.contenido ?? '',
+    nombreAutor: dto.nombreAutor ?? '',
+    estadoContenido: dto.estadoContenido ?? '',
+    cantidadReportes: dto.cantidadReportes ?? 0,
+    fechaUltimoReporte: dto.fechaUltimoReporte ?? '',
+    reportes: (dto.reportes ?? []).map(desdeDto.reporte),
+  }),
+
+  veto: (dto) => ({
+    idModeracion: idValido(dto.idModeracion),
+    tipoContenido: dto.tipoContenido ?? '',
+    idContenido: idValido(dto.idContenido),
+    idKudo: idValido(dto.idKudo),
+    contenido: dto.contenido ?? '',
+    nombreAutor: dto.nombreAutor ?? '',
+    nombreModerador: dto.nombreModerador ?? '',
+    fechaVeto: dto.fechaVeto ?? '',
+    motivo: dto.motivo ?? '',
+    cantidadReportes: dto.cantidadReportes ?? 0,
   }),
 
   persona: (dto) => ({
@@ -192,6 +232,10 @@ export const haciaDto = {
   replica: (contenido) => ({ contenido: texto(contenido) }),
 
   calificacion: (estrellas) => ({ estrellas: Number(estrellas) }),
+
+  reporte: (datos) => ({ motivo: datos.motivo, descripcion: texto(datos.descripcion) }),
+
+  decision: (motivo) => ({ motivo: texto(motivo) }),
 
   facultad: (datos) => ({ nombre: texto(datos.nombre) }),
 

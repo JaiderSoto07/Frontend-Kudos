@@ -2,6 +2,7 @@ import {
   ROLES_APROBADORES,
   ROLES_CONSULTAN_ORGANIZACION,
   ROLES_GESTORES_CATEGORIAS,
+  ROLES_MODERADORES,
   ROLES_QUE_REGISTRAN_AUTORIDADES,
 } from '@/shared/domain/cuenta'
 
@@ -9,6 +10,7 @@ export const GRUPOS_MENU = [
   [
     { label: 'Inicio', icon: 'home', to: '/inicio' },
     { label: 'Mis Kudos', icon: 'star', to: '/mis-kudos' },
+    { label: 'Mis reportes', icon: 'flag', to: '/mis-reportes' },
   ],
   [
     { label: 'Solicitudes', icon: 'users', to: '/solicitudes', roles: ROLES_APROBADORES },
@@ -19,6 +21,7 @@ export const GRUPOS_MENU = [
       roles: ROLES_QUE_REGISTRAN_AUTORIDADES,
     },
     { label: 'Categorías', icon: 'tag', to: '/categorias', roles: ROLES_GESTORES_CATEGORIAS },
+    { label: 'Moderación', icon: 'flag', to: '/moderacion', roles: ROLES_MODERADORES },
   ],
   [
     { label: 'Estructura', icon: 'building', to: '/estructura' },

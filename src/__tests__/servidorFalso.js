@@ -885,6 +885,179 @@ function atenderConversacion(metodo, ruta, cuerpo) {
   return null
 }
 
+export const reportesGuardados = () => reportes
+export const vetosGuardados = () => vetos
+
+const CONTENIDO_VETADO = 'Contenido vetado por moderación'
+const ROLES_MODERADORES = ['RECTOR', 'COORDINADOR_ACADEMICO']
+
+let reportes = []
+let vetos = []
+let siguienteReporte = 500
+
+const nombreActual = () => `${usuarioActual.nombres} ${usuarioActual.apellidos}`
+
+const contenidoDe = (tipo, id) =>
+  tipo === 'KUDO' ? kudos.find((k) => k.id === id) : replicas.find((r) => r.id === id)
+
+function nuevoReporte(tipo, contenido, idReportante, nombreReportante, motivo, descripcion) {
+  siguienteReporte += 1
+  reportes.push({
+    id: uuid(siguienteReporte),
+    motivo,
+    descripcion,
+    fechaReporte: '2026-11-10T12:00:00',
+    estado: contenido.estado === 'EN_REVISION' ? 'EN_REVISION' : 'PENDIENTE',
+    tipoContenido: tipo,
+    idContenido: contenido.id,
+    idKudo: tipo === 'KUDO' ? contenido.id : contenido.idKudo,
+    contenido: contenido.contenido,
+    nombreAutorContenido: contenido.nombreAutor,
+    nombreReportante,
+    idReportante,
+  })
+  if (contenido.estado === 'VISIBLE') contenido.estado = 'REPORTADO'
+}
+
+function reportar(tipo, contenido, cuerpo) {
+  if (!contenido) return error('El contenido indicado no existe.')
+  if (contenido.estado === 'VETADO') return error('Este contenido ya fue vetado por moderación.')
+  if (contenido.idAutor === usuarioActual.id) {
+    return error('No puedes reportar lo que tú mismo escribiste.')
+  }
+  if (!cuerpo?.motivo) return error('Elige el motivo del reporte.')
+  if (cuerpo.motivo === 'OTRO' && !cuerpo.descripcion) {
+    return error('Cuando el motivo es "Otro", describe qué problema tiene el contenido.')
+  }
+  const abierto = reportes.some(
+    (r) =>
+      r.idContenido === contenido.id &&
+      r.idReportante === usuarioActual.id &&
+      ['PENDIENTE', 'EN_REVISION'].includes(r.estado),
+  )
+  if (abierto) return error('Ya reportaste este contenido. Espera la decisión del moderador.')
+  nuevoReporte(tipo, contenido, usuarioActual.id, nombreActual(), cuerpo.motivo, cuerpo.descripcion)
+  return ok([], ['Tu reporte quedó registrado. Un moderador lo revisará.'])
+}
+
+function bandeja() {
+  const grupos = []
+  for (const reporte of reportes.filter((r) => ['PENDIENTE', 'EN_REVISION'].includes(r.estado))) {
+    let grupo = grupos.find((g) => g.idContenido === reporte.idContenido)
+    if (!grupo) {
+      grupo = {
+        tipoContenido: reporte.tipoContenido,
+        idContenido: reporte.idContenido,
+        idKudo: reporte.idKudo,
+        contenido: reporte.contenido,
+        nombreAutor: reporte.nombreAutorContenido,
+        estadoContenido: contenidoDe(reporte.tipoContenido, reporte.idContenido).estado,
+        cantidadReportes: 0,
+        fechaUltimoReporte: reporte.fechaReporte,
+        reportes: [],
+      }
+      grupos.push(grupo)
+    }
+    grupo.reportes.push(reporte)
+    grupo.cantidadReportes = grupo.reportes.length
+  }
+  return ok(grupos)
+}
+
+function resolver(contenido, estadoReporte) {
+  for (const reporte of reportes) {
+    if (
+      reporte.idContenido === contenido.id &&
+      ['PENDIENTE', 'EN_REVISION'].includes(reporte.estado)
+    ) {
+      reporte.estado = estadoReporte
+    }
+  }
+}
+
+function moderar(tipo, contenido, accion, cuerpo) {
+  if (!contenido) return error('El contenido indicado no existe.')
+  if (accion === 'revision') {
+    if (contenido.estado === 'EN_REVISION')
+      return error('Este contenido ya tiene una revisión en curso.')
+    if (contenido.estado !== 'REPORTADO') {
+      return error('Solo se puede revisar un contenido que tiene reportes pendientes.')
+    }
+    contenido.estado = 'EN_REVISION'
+    for (const reporte of reportes) {
+      if (reporte.idContenido === contenido.id && reporte.estado === 'PENDIENTE')
+        reporte.estado = 'EN_REVISION'
+    }
+    return ok()
+  }
+  const motivo = String(cuerpo?.motivo ?? '').trim()
+  if (motivo.length < 10 || motivo.length > 500) {
+    return error('El motivo de la decisión debe tener entre 10 y 500 caracteres.')
+  }
+  if (accion === 'liberacion') {
+    if (contenido.estado !== 'EN_REVISION') {
+      return error('Solo se puede liberar un contenido que está en revisión.')
+    }
+    contenido.estado = 'VISIBLE'
+    resolver(contenido, 'RECHAZADO')
+    return ok()
+  }
+  if (contenido.estado === 'VETADO') return error('Este contenido ya fue vetado por moderación.')
+  vetos.push({
+    idModeracion: uuid(800 + vetos.length),
+    tipoContenido: tipo,
+    idContenido: contenido.id,
+    idKudo: tipo === 'KUDO' ? contenido.id : contenido.idKudo,
+    contenido: contenido.contenido,
+    nombreAutor: contenido.nombreAutor,
+    nombreModerador: nombreActual(),
+    fechaVeto: '2026-11-10T13:00:00',
+    motivo,
+    cantidadReportes: reportes.filter(
+      (r) => r.idContenido === contenido.id && ['PENDIENTE', 'EN_REVISION'].includes(r.estado),
+    ).length,
+  })
+  resolver(contenido, 'ACEPTADO')
+  Object.assign(contenido, { estado: 'VETADO', contenido: CONTENIDO_VETADO })
+  if (tipo === 'KUDO') contenido.vetado = true
+  else contenido.vetada = true
+  for (const reporte of reportes) {
+    if (reporte.idContenido === contenido.id) reporte.contenido = CONTENIDO_VETADO
+  }
+  return ok()
+}
+
+function atenderModeracion(metodo, ruta, cuerpo) {
+  const reporte = ruta.match(/^\/api\/(kudos|replicas)\/([^/]+)\/reportes$/)
+  if (metodo === 'POST' && reporte) {
+    const tipo = reporte[1] === 'kudos' ? 'KUDO' : 'REPLICA'
+    return reportar(tipo, contenidoDe(tipo, reporte[2]), cuerpo)
+  }
+  if (metodo === 'GET' && ruta === '/api/reportes/mios') {
+    return ok(reportes.filter((r) => r.idReportante === usuarioActual.id))
+  }
+  if (!ROLES_MODERADORES.includes(usuarioActual.rol)) {
+    return error('Solo el Rector o el Coordinador Académico pueden moderar contenido.', 403)
+  }
+  if (metodo === 'GET' && ruta === '/api/moderacion/reportes') return bandeja()
+  if (metodo === 'GET' && ruta === '/api/moderacion/vetos') return ok(vetos)
+  const decision = ruta.match(
+    /^\/api\/moderacion\/(kudos|replicas)\/([^/]+)\/(revision|veto|liberacion)$/,
+  )
+  if (metodo === 'POST' && decision) {
+    const tipo = decision[1] === 'kudos' ? 'KUDO' : 'REPLICA'
+    return moderar(tipo, contenidoDe(tipo, decision[2]), decision[3], cuerpo)
+  }
+  return null
+}
+
+function reportesIniciales() {
+  const kudo = kudos.find((k) => k.id === ID_KUDO.segundo)
+  nuevoReporte('KUDO', kudo, PERSONAS[0].id, PERSONAS[0].nombre, 'LENGUAJE_OFENSIVO', '')
+  const replica = replicas.find((r) => r.id === ID_REPLICA.marta)
+  nuevoReporte('REPLICA', replica, PERSONAS[0].id, PERSONAS[0].nombre, 'OTRO', 'Se burla de Luis.')
+}
+
 export const peticiones = []
 
 function atender(metodo, url, cuerpo) {
@@ -901,6 +1074,10 @@ function atender(metodo, url, cuerpo) {
   }
   if (ruta.startsWith('/api/categorias')) {
     const respuesta = atenderCategorias(metodo, ruta, cuerpo)
+    if (respuesta) return respuesta
+  }
+  if (/^\/api\/(moderacion|reportes|(kudos|replicas)\/[^/]+\/reportes$)/.test(ruta)) {
+    const respuesta = atenderModeracion(metodo, ruta, cuerpo)
     if (respuesta) return respuesta
   }
   if (/^\/api\/(kudos\/[^/]+\/|replicas\/)/.test(ruta)) {
@@ -927,7 +1104,11 @@ function atender(metodo, url, cuerpo) {
   return responder(404, sobre('ERROR', [], [`Este recurso no existe: ${ruta}`]))
 }
 
-export function iniciarServidorFalso({ conSesion = true, usuario = USUARIO_ACTIVO } = {}) {
+export function iniciarServidorFalso({
+  conSesion = true,
+  usuario = USUARIO_ACTIVO,
+  conReportes = false,
+} = {}) {
   sesionActiva = conSesion
   usuarioActual = usuario
   codigoPendiente = '123456'
@@ -937,6 +1118,10 @@ export function iniciarServidorFalso({ conSesion = true, usuario = USUARIO_ACTIV
   replicas = replicasIniciales()
   calificaciones = calificacionesIniciales()
   siguienteReplica = 300
+  reportes = []
+  vetos = []
+  siguienteReporte = 500
+  if (conReportes) reportesIniciales()
   facultades = FACULTADES_INICIALES.map((f) => ({ ...f }))
   programas = PROGRAMAS_INICIALES.map((p) => ({ ...p }))
   vinculos = VINCULOS_INICIALES.map((v) => ({ ...v }))

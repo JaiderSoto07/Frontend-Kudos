@@ -68,6 +68,7 @@ describe('Solicitudes de cuenta (CU-022 a CU-025)', () => {
     expect(menu(wrapper)).toEqual([
       'Inicio',
       'Mis Kudos',
+      'Mis reportes',
       'Solicitudes',
       'Estructura',
       'Facultades',

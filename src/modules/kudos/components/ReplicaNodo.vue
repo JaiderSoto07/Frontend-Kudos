@@ -13,9 +13,10 @@ const props = defineProps({
   nombrePadre: { type: String, default: '' },
   idUsuario: { type: String, default: '' },
   abierta: { type: Boolean, default: true },
+  moderador: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['actualizado'])
+const emit = defineEmits(['actualizado', 'reportar', 'vetar'])
 
 const expandido = ref(true)
 const respondiendo = ref(false)
@@ -100,6 +101,22 @@ async function calificar(estrellas) {
         Calificar
       </button>
       <button
+        v-if="admiteInteraccion && !esPropia"
+        type="button"
+        class="replica__accion replica__reportar"
+        @click="emit('reportar', replica)"
+      >
+        Reportar
+      </button>
+      <button
+        v-if="moderador && !replica.vetada"
+        type="button"
+        class="replica__accion replica__accion--peligro replica__vetar"
+        @click="emit('vetar', replica)"
+      >
+        Vetar
+      </button>
+      <button
         v-if="cantidadRespuestas"
         type="button"
         class="replica__accion replica__alternar"
@@ -144,7 +161,10 @@ async function calificar(estrellas) {
         :nombre-padre="replica.nombreAutor"
         :id-usuario="idUsuario"
         :abierta="abierta"
+        :moderador="moderador"
         @actualizado="emit('actualizado')"
+        @reportar="emit('reportar', $event)"
+        @vetar="emit('vetar', $event)"
       />
     </div>
   </article>
@@ -198,6 +218,10 @@ async function calificar(estrellas) {
   background: none;
   border: none;
   cursor: pointer;
+}
+
+.replica__accion--peligro {
+  color: var(--color-danger);
 }
 
 .replica__error {

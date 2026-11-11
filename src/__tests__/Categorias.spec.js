@@ -68,6 +68,7 @@ describe('Categorías: acceso por rol', () => {
     expect(menu).toEqual([
       'Inicio',
       'Mis Kudos',
+      'Mis reportes',
       'Registrar autoridad',
       'Categorías',
       'Estructura',
@@ -87,7 +88,7 @@ describe('Categorías: acceso por rol', () => {
     const { wrapper, router } = await montarApp('/categorias')
     expect(router.currentRoute.value.name).toBe('inicio')
     const menu = wrapper.findAll('.sidebar nav li').map((li) => li.text())
-    expect(menu).toEqual(['Inicio', 'Mis Kudos', 'Estructura', 'Mi cuenta'])
+    expect(menu).toEqual(['Inicio', 'Mis Kudos', 'Mis reportes', 'Estructura', 'Mi cuenta'])
     expect(peticiones.some((p) => p.ruta === '/api/categorias/todas')).toBe(false)
     wrapper.unmount()
   })
